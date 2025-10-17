@@ -1,0 +1,159 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+            "type": "string",
+            "description": "The role of the user.",
+            "enum": ["student", "teacher", "admin"]
+        },
+        "school": {
+          "type": "string",
+          "description": "The user's school ID."
+        },
+        "grade": {
+          "type": "string",
+          "description": "The user's grade level (for students)."
+        },
+        "class": {
+          "type": "string",
+          "description": "The user's class identifier (for students)."
+        },
+        "teacherProfile": {
+            "type": "object",
+            "description": "Teacher-specific profile information.",
+            "properties": {
+                "classes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "grade": {"type": "string"},
+                            "class": {"type": "string"},
+                            "subject": {"type": "string"}
+                        },
+                        "required": ["grade", "class", "subject"]
+                    }
+                }
+            }
+        }
+      },
+      "required": ["name", "email", "role", "school"]
+    },
+    "ClassroomSchedule": {
+      "title": "Classroom Schedule",
+      "description": "Represents the shared schedule for a specific classroom.",
+      "type": "object",
+      "properties": {
+        "schedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "session": {"type": "string"},
+              "time": {"type": "string"},
+              "sunday": {"type": "string"},
+              "monday": {"type": "string"},
+              "tuesday": {"type": "string"},
+              "wednesday": {"type": "string"},
+              "thursday": {"type": "string"}
+            }
+          }
+        },
+        "lastUpdatedBy": {
+          "type": "string",
+          "description": "Name of the user who last updated the schedule."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the last update."
+        }
+      },
+      "required": ["schedule"]
+    },
+    "Explanation": {
+      "title": "Explanation Commitment",
+      "description": "Represents a student's commitment to explain a topic.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who will explain."
+        },
+        "userName": {
+          "type": "string",
+          "description": "The name of the user who will explain."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject of the session."
+        },
+        "day": {
+          "type": "string",
+          "description": "The day of the week for the session."
+        },
+        "session": {
+          "type": "string",
+          "description": "The session number."
+        },
+        "learningOutcome": {
+          "type": "number",
+          "description": "The learning outcome number (1-10). Not applicable for language subjects."
+        },
+        "concepts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "A list of concepts the user will explain."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "explanationDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Upcoming", "Finished"]
+        },
+        "completionStatus": {
+            "type": "string",
+            "enum": ["pending", "explained", "not-explained"]
+        }
+      },
+      "required": ["userId", "userName", "subject", "day", "session", "concepts", "explanationDate", "status"]
+    }
+  },
+  "auth": {
+    "providers": ["email-password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores public profile information for each user."
+    },
+    "/classrooms/{classroomId}": {
+      "schema": { "$ref": "#/entities/ClassroomSchedule" },
+      "description": "Stores the shared schedule for a classroom. The classroomId is a combination of school, grade and class, e.g., 'stem-kafr-elsheikh-11-c'."
+    },
+    "/classrooms/{classroomId}/explanations/{explanationId}": {
+      "schema": { "$ref": "#/entities/Explanation" },
+      "description": "Stores explanation commitments for a specific classroom."
+    }
+  }
+}

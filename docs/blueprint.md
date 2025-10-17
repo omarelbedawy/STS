@@ -1,17 +1,18 @@
-# **App Name**: Accountable
+# **App Name**: ScheduleAI
 
 ## Core Features:
 
-- User Authentication: Secure sign-up, login, and logout functionality for users.
-- Profile Management: Allow users to create and manage their profiles, including updating personal information.
-- Password Reset: Enable users to reset their passwords via email verification.
+- Image Upload and OCR: Allow users to upload images of their school schedules. Perform OCR on the uploaded image to extract the text.
+- Schedule Analysis via AI: Use a tool that incorporates an LLM to parse and analyze the OCR text. Determine the subjects, times, and days from the extracted text. Identify possible errors or ambiguities in the schedule and, if found, flag those.
+- Structured Schedule Display: Present the analyzed schedule in a structured, easily readable format on the web. Format must have clear delineation of Days and class times
+- Copy-Paste Output: Provide a way for the user to copy the structured schedule as text or markdown.
 
 ## Style Guidelines:
 
-- Primary color: A deep blue (#3F51B5) to convey trust and security.
-- Background color: A very light blue (#F0F2FF) for a clean and calm aesthetic.
-- Accent color: A vibrant purple (#7E57C2) to highlight calls to action.
-- Body and headline font: 'Inter', a sans-serif, will provide a clean and modern feel for readability.
-- Use simple, outline-style icons for key actions and navigation.
-- Design a clean and intuitive layout that prioritizes ease of use and accessibility on all devices.
-- Incorporate subtle animations and transitions to enhance the user experience.
+- Primary color: Light sky blue (#87CEEB) to evoke a sense of calm and focus.
+- Background color: Very pale blue (#F0F8FF), near white.
+- Accent color: Soft orange (#FFB347) to highlight important elements and call to actions.
+- Font: 'Inter' sans-serif for a modern and readable schedule.
+- Code Font: 'Source Code Pro' if structured output uses code-like formatting (e.g. Markdown).
+- Use a clean, tabular layout to present the schedule data clearly.
+- Use simple icons to represent subjects or days of the week (optional).

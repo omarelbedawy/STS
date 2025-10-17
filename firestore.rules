@@ -1,0 +1,70 @@
+/**
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a user-ownership model for user profiles,
+ * allowing each user to read and write their own profile data.
+ * Classroom schedules are publicly readable, but updates are restricted
+ * to authenticated users only.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profile information, where userId is the
+ *   UID of the authenticated user.
+ * - /classrooms/{classroomId}: Stores classroom schedules. The classroomId
+ *   is a combination of grade and class, e.g., '11-c'.
+ *
+ * Key Security Decisions:
+ * - Users can only manage their own profile data.
+ * - Listing all users is disallowed.
+ * - Classroom schedules are publicly readable to facilitate easy access.
+ * - Only authenticated users can update classroom schedules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Secures user profiles, ensuring users can only manage their own data.
+     * @path /users/{userId}
+     * @allow (create) User with UID 'user_abc' can create their profile at /users/user_abc.
+     * @allow (get, update, delete) User with UID 'user_abc' can read, update, and delete their profile at /users/user_abc.
+     * @deny (create) User with UID 'user_xyz' cannot create a profile at /users/user_abc.
+     * @deny (get, update, delete) User with UID 'user_xyz' cannot read, update, or delete the profile at /users/user_abc.
+     * @principle Enforces document ownership for user profiles.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures classroom schedules, allowing public reads and authenticated updates.
+     * @path /classrooms/{classroomId}
+     * @allow (get, list) Any user can read the classroom schedule at /classrooms/11-a.
+     * @allow (update) Authenticated user can update the classroom schedule at /classrooms/11-a.
+     * @deny (update) Unauthenticated user cannot update the classroom schedule at /classrooms/11-a.
+     * @principle Allows public read access with authentication required for writes.
+     */
+    match /classrooms/{classroomId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+  }
+}
