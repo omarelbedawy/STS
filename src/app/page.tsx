@@ -3,7 +3,7 @@
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BookOpen, User, Briefcase, Shield, Users } from "lucide-react";
+import { ArrowRight, BookOpen, User, Briefcase, Shield, Users, Linkedin, Mail, Phone } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -165,9 +165,24 @@ export default function LandingPage() {
         </section>
       </main>
 
-       <footer className="border-t">
-        <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-muted-foreground">
-          <p>&copy; {year} STS (Self Teaching STEMer). All rights reserved.</p>
+      <footer className="border-t bg-secondary/50">
+        <div className="container mx-auto px-4 py-10 sm:px-6 lg:px-8 text-center">
+            <h4 className="text-2xl font-bold mb-4">Contact Me</h4>
+            <p className="text-muted-foreground mb-6">
+                This website was created by Omar Elbedawy at Kafr-elSheikh STEM school.
+            </p>
+            <div className="flex justify-center items-center gap-6 mb-8">
+                <a href="https://www.linkedin.com/in/omar-elbedawy-587958380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                    <Linkedin className="size-6" />
+                </a>
+                <a href="mailto:elbedawyomar2009@gmail.com" className="text-muted-foreground hover:text-primary transition-colors">
+                    <Mail className="size-6" />
+                </a>
+                <a href="tel:01503449731" className="text-muted-foreground hover:text-primary transition-colors">
+                    <Phone className="size-6" />
+                </a>
+            </div>
+            <p className="text-sm text-muted-foreground">&copy; {year} STS (Self Teaching STEMer). All rights reserved.</p>
         </div>
       </footer>
     </div>
