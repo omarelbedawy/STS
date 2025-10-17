@@ -2,16 +2,38 @@
 'use client';
 
 import { Header } from "@/components/app/header";
-import { ScheduleAnalyzer } from "@/components/app/schedule-analyzer";
 import { useUser } from "@/firebase/auth/use-user";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import type { UserProfile } from "@/lib/types";
 import { doc } from "firebase/firestore";
-import { TeacherDashboard } from "@/components/app/teacher-dashboard";
-import { AdminDashboard } from "@/components/app/admin-dashboard";
+import dynamic from 'next/dynamic';
+import { Skeleton } from "@/components/ui/skeleton";
+
+const TeacherDashboard = dynamic(() => import('@/components/app/teacher-dashboard').then(mod => mod.TeacherDashboard), { 
+  loading: () => <DashboardSkeleton />,
+  ssr: false 
+});
+const AdminDashboard = dynamic(() => import('@/components/app/admin-dashboard').then(mod => mod.AdminDashboard), {
+  loading: () => <DashboardSkeleton />,
+  ssr: false
+});
+const ScheduleAnalyzer = dynamic(() => import('@/components/app/schedule-analyzer').then(mod => mod.ScheduleAnalyzer), {
+  loading: () => <DashboardSkeleton />,
+  ssr: false
+});
+
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8">
+      <Skeleton className="h-48 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -58,7 +80,9 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <main className="container mx-auto px-4 pb-12 pt-8">
-        {renderDashboard()}
+        <Suspense fallback={<DashboardSkeleton />}>
+          {renderDashboard()}
+        </Suspense>
       </main>
     </div>
   );
