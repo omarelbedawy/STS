@@ -25,7 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { auth } from "@/firebase/auth/client";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +87,7 @@ export default function TeacherSignUpPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
+      await sendEmailVerification(user);
 
       const userProfile = {
         name: values.name,
@@ -110,7 +111,7 @@ export default function TeacherSignUpPage() {
       
       toast({
         title: "Account Created",
-        description: "You have been successfully signed up as a teacher.",
+        description: "You've been signed up as a teacher. A verification email has been sent.",
       });
 
       router.push("/dashboard");
