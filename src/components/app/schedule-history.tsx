@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ClassroomSchedule } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
-import { History, CheckCircle, Upload, RotateCw } from "lucide-react";
+import { History, CheckCircle, Upload, RotateCw, Trash2 } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -24,11 +24,13 @@ export function ScheduleHistory({
     history,
     activeScheduleId,
     onRestore,
+    onDelete,
     classroomId,
 }: {
     history: ClassroomSchedule[];
     activeScheduleId?: string;
     onRestore: (scheduleId: string) => void;
+    onDelete: (scheduleId: string) => void;
     classroomId: string;
 }) {
 
@@ -67,33 +69,56 @@ export function ScheduleHistory({
                                             </p>
                                             <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
                                         </div>
-                                        {is_active ? (
-                                             <div className="flex items-center gap-1.5 text-xs text-green-600 font-semibold">
-                                                <CheckCircle className="size-4" /> Active
-                                            </div>
-                                        ) : (
-                                            <AlertDialog>
+                                        <div className="flex items-center gap-1">
+                                            {is_active ? (
+                                                <div className="flex items-center gap-1.5 text-xs text-green-600 font-semibold">
+                                                    <CheckCircle className="size-4" /> Active
+                                                </div>
+                                            ) : (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="h-7">
+                                                            <RotateCw className="mr-2 size-3"/> Restore
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Restore this version?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This will make the schedule uploaded by {item.uploadedBy} on {uploadedAtDate?.toLocaleDateString()} the active schedule for the class.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => onRestore(item.id)}>
+                                                                Yes, Restore
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            )}
+                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-7">
-                                                        <RotateCw className="mr-2 size-3"/> Restore
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                                                        <Trash2 className="size-4" />
                                                     </Button>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>Restore this version?</AlertDialogTitle>
+                                                        <AlertDialogTitle>Delete this version?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            This will make the schedule uploaded by {item.uploadedBy} on {uploadedAtDate?.toLocaleDateString()} the active schedule for the class.
+                                                            This action is permanent and cannot be undone. Are you sure you want to delete this schedule version?
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => onRestore(item.id)}>
-                                                            Yes, Restore
+                                                        <AlertDialogAction onClick={() => onDelete(item.id)} className="bg-destructive hover:bg-destructive/90">
+                                                            Yes, Delete
                                                         </AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
-                                        )}
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -109,4 +134,3 @@ export function ScheduleHistory({
         </Card>
     );
 }
-

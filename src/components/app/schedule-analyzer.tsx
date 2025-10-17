@@ -31,7 +31,7 @@ import Image from "next/image";
 import { ScheduleTable } from "./schedule-table";
 import { useUser } from "@/firebase/auth/use-user";
 import { useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, setDoc, serverTimestamp, collection, query, where, writeBatch, updateDoc, addDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, query, where, writeBatch, updateDoc, addDoc, deleteDoc } from "firebase/firestore";
 import type { UserProfile, Explanation, ClassroomSchedule } from "@/lib/types";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
@@ -369,6 +369,55 @@ export function ScheduleAnalyzer() {
       setShowHistory(false);
   }
 
+  const handleDeleteVersion = async (scheduleId: string) => {
+    if (!firestore || !classroomId || !scheduleHistory) return;
+
+    try {
+      // Prevent deleting the last remaining schedule
+      if (scheduleHistory.length <= 1) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete",
+          description: "You cannot delete the only remaining schedule version.",
+        });
+        return;
+      }
+      
+      const scheduleToDeleteRef = doc(firestore, 'classrooms', classroomId, 'schedules', scheduleId);
+      await deleteDoc(scheduleToDeleteRef);
+
+      toast({
+        title: "Version Deleted",
+        description: "The schedule version has been permanently removed.",
+      });
+
+      // If the deleted version was the active one, set the most recent one as active
+      if (classroom?.activeScheduleId === scheduleId) {
+        const remainingSchedules = scheduleHistory.filter(s => s.id !== scheduleId);
+        const sortedRemaining = [...remainingSchedules].sort((a, b) => {
+            const dateA = a.uploadedAt?.toDate()?.getTime() || 0;
+            const dateB = b.uploadedAt?.toDate()?.getTime() || 0;
+            return dateB - dateA;
+        });
+
+        if (sortedRemaining.length > 0) {
+            const newActiveId = sortedRemaining[0].id;
+            const classroomDocRef = doc(firestore, 'classrooms', classroomId);
+            await updateDoc(classroomDocRef, { activeScheduleId: newActiveId });
+        }
+      }
+
+    } catch (error) {
+      console.error("Error deleting schedule version:", error);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "Could not delete the schedule version. Please try again.",
+      });
+    }
+  };
+
+
   if (state === 'initializing' || isLoading) {
     return <LoadingState isAnalyzing={false} />;
   }
@@ -379,20 +428,35 @@ export function ScheduleAnalyzer() {
   
   if (state === "idle" || state === "previewing") {
     return (
-      <UploadCard
-        isDragging={isDragging}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        fileInputRef={fileInputRef}
-        onFileChange={onFileChange}
-        state={state}
-        previewUrl={previewUrl}
-        onReset={onReset}
-        onSubmit={onSubmit}
-        schoolName={getSchoolName()}
-        hasExistingSchedule={!!activeSchedule}
-      />
+      <div className="flex gap-8 items-start">
+        <div className="flex-1">
+          <UploadCard
+            isDragging={isDragging}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            fileInputRef={fileInputRef}
+            onFileChange={onFileChange}
+            state={state}
+            previewUrl={previewUrl}
+            onReset={onReset}
+            onSubmit={onSubmit}
+            schoolName={getSchoolName()}
+            hasExistingSchedule={!!activeSchedule}
+            onToggleHistory={() => setShowHistory(p => !p)}
+            isHistoryVisible={showHistory}
+          />
+        </div>
+         {showHistory && scheduleHistory && classroomId && (
+          <ScheduleHistory 
+            history={scheduleHistory}
+            activeScheduleId={classroom?.activeScheduleId}
+            onRestore={handleRestoreVersion}
+            onDelete={handleDeleteVersion}
+            classroomId={classroomId}
+          />
+        )}
+      </div>
     );
   }
 
@@ -426,6 +490,7 @@ export function ScheduleAnalyzer() {
             history={scheduleHistory}
             activeScheduleId={classroom?.activeScheduleId}
             onRestore={handleRestoreVersion}
+            onDelete={handleDeleteVersion}
             classroomId={classroomId}
           />
         )}
@@ -589,6 +654,8 @@ function UploadCard({
   onSubmit,
   schoolName,
   hasExistingSchedule,
+  onToggleHistory,
+  isHistoryVisible
 }: {
   isDragging: boolean;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
@@ -602,6 +669,8 @@ function UploadCard({
   onSubmit: () => void;
   schoolName: string;
   hasExistingSchedule: boolean;
+  onToggleHistory: () => void;
+  isHistoryVisible: boolean;
 }) {
   return (
     <Card
@@ -614,8 +683,17 @@ function UploadCard({
       onDrop={onDrop}
     >
       <CardHeader>
-        <CardTitle>{hasExistingSchedule ? "Upload a New Schedule" : "No Schedule Found"}</CardTitle>
-        <CardDescription>{hasExistingSchedule ? `Upload a new image to replace the current schedule for ${schoolName}.` : `The schedule for ${schoolName} has not been uploaded yet. Be the first!`}</CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle>{hasExistingSchedule ? "Upload a New Schedule" : "No Schedule Found"}</CardTitle>
+              <CardDescription>{hasExistingSchedule ? `Upload a new image to replace the current schedule for ${schoolName}.` : `The schedule for ${schoolName} has not been uploaded yet. Be the first!`}</CardDescription>
+            </div>
+            {hasExistingSchedule && (
+                <Button onClick={onToggleHistory} variant={isHistoryVisible ? "default" : "outline"} size="sm">
+                    <History className="mr-2"/> View History
+                </Button>
+            )}
+          </div>
       </CardHeader>
       <CardContent className="p-6">
         <input
