@@ -139,15 +139,18 @@ export function ScheduleAnalyzer() {
       setState("initializing");
       return;
     }
-    
-    // This effect should not interfere if the user is in the process of uploading.
-    if (state === 'initializing' || state === 'displaying') {
-        if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
-            setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
-            setState("displaying");
-        } else {
-            setState("idle");
-        }
+  
+    // Once loading is complete, decide which state to be in.
+    // This effect should not interfere if the user is already in the process of uploading.
+    if (state === 'initializing' || state === 'displaying' || state === 'idle') {
+      if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
+        // If an active schedule exists, always display it.
+        setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
+        setState("displaying");
+      } else {
+        // If there's no active schedule, go to the upload screen.
+        setState("idle");
+      }
     }
   }, [isLoading, activeSchedule, state]);
   
@@ -630,7 +633,7 @@ function ResultState({ user, classroomId, activeSchedule, editableSchedule, clas
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={onNewUpload} variant="outline">
-              Upload New Schedule
+              Upload New Version
             </Button>
             <Button onClick={isEditing ? onSaveEdits : () => setIsEditing(true)} variant="outline" className="w-28">
               {isEditing ? <Save /> : <Pencil />}
