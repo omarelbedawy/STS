@@ -12,6 +12,7 @@ import {
   UploadCloud,
   X,
   History,
+  BellRing,
 } from "lucide-react";
 
 import { analyzeScheduleAction } from "@/app/actions";
@@ -39,6 +40,9 @@ import { schoolList } from "@/lib/schools";
 import { ClassmatesDashboard } from "./classmates-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleHistory } from "./schedule-history";
+import { differenceInDays, formatDistanceToNowStrict } from "date-fns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 type AnalysisState = "idle" | "previewing" | "loading" | "displaying" | "initializing";
 type ScheduleRow = AnalyzeScheduleFromImageOutput["schedule"][number];
@@ -466,6 +470,7 @@ export function ScheduleAnalyzer() {
     return (
       <div className="flex gap-8 items-start">
         <div className="flex-1 space-y-8">
+            <ReminderAlert explanations={explanations || []} currentUser={userProfile} />
             <ResultState
                 user={userProfile}
                 classroomId={classroomId}
@@ -499,6 +504,39 @@ export function ScheduleAnalyzer() {
   }
 
   return null;
+}
+
+function ReminderAlert({ explanations, currentUser }: { explanations: Explanation[], currentUser: UserProfile | null }) {
+  const upcomingUserExplanations = useMemo(() => {
+    if (!currentUser) return [];
+    const now = new Date();
+    return explanations.filter(exp => {
+      const isContributor = (exp.contributors || []).some(c => c.userId === currentUser.uid && c.status === 'accepted');
+      if (exp.status !== 'Upcoming' || !isContributor) return false;
+
+      const diff = differenceInDays(exp.explanationDate.toDate(), now);
+      return diff >= 0 && diff <= 2; // Is today, tomorrow, or the day after
+    }).sort((a,b) => a.explanationDate.toDate() - b.explanationDate.toDate());
+  }, [explanations, currentUser]);
+
+  if (upcomingUserExplanations.length === 0) return null;
+
+  return (
+    <Alert>
+        <BellRing className="h-4 w-4" />
+        <AlertTitle>Upcoming Explanations!</AlertTitle>
+        <AlertDescription>
+            You have {upcomingUserExplanations.length} commitment(s) coming up soon.
+            <ul className="mt-2 list-disc list-inside">
+                {upcomingUserExplanations.map(exp => (
+                    <li key={exp.id}>
+                        <strong>{exp.subject}</strong>: {formatDistanceToNowStrict(exp.explanationDate.toDate(), { addSuffix: true })}
+                    </li>
+                ))}
+            </ul>
+        </AlertDescription>
+    </Alert>
+  )
 }
 
 function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {

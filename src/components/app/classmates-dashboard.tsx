@@ -24,6 +24,8 @@ import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+
 
 function getInitials(name: string) {
     if (!name) return '';
@@ -44,10 +46,12 @@ function ContributorList({ contributors }: { contributors: ExplanationContributo
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                  {acceptedContributors.map(c => (
                     <div key={c.userId} className="flex items-center gap-1.5">
-                        <Avatar className="h-5 w-5 border-2 border-background">
-                            <AvatarFallback className="text-[10px]">{getInitials(c.userName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs font-medium">{c.userName}</span>
+                        <Link href={`/profile/${c.userId}`} className="flex items-center gap-1.5 hover:underline">
+                            <Avatar className="h-5 w-5 border-2 border-background">
+                                <AvatarFallback className="text-[10px]">{getInitials(c.userName)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs font-medium">{c.userName}</span>
+                        </Link>
                     </div>
                  ))}
             </div>
@@ -275,12 +279,16 @@ export function ClassmatesDashboard({ classmates, explanations, currentUser, cla
 
                         return (
                             <div key={student.uid} className="flex items-start gap-4">
-                                <Avatar>
-                                    <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
-                                </Avatar>
+                                <Link href={`/profile/${student.uid}`} className="block">
+                                    <Avatar>
+                                        <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                                    </Avatar>
+                                </Link>
                                 <div className="w-full space-y-3">
                                     <div>
-                                        <p className="font-medium">{student.name} {student.uid === currentUser?.uid && "(You)"}</p>
+                                        <Link href={`/profile/${student.uid}`} className="hover:underline">
+                                            <p className="font-medium">{student.name} {student.uid === currentUser?.uid && "(You)"}</p>
+                                        </Link>
                                         <p className="text-sm text-muted-foreground">{student.email}</p>
                                     </div>
                                     {studentExplanations.length > 0 && (

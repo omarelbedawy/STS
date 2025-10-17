@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ArrowLeftRight, Split, Loader2, X, CalendarIcon } from "lucide-react";
+import { ArrowLeftRight, Split, Loader2, X, CalendarIcon, Check, PartyPopper } from "lucide-react";
 import React, { useState, KeyboardEvent, useMemo } from 'react';
 import type { UserProfile, Explanation, ExplanationContributor } from "@/lib/types";
 import { Button } from "../ui/button";
@@ -35,7 +35,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, writeBatch, getDocs, query, where, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import {
   Tooltip,
@@ -56,6 +56,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 
 
@@ -149,6 +150,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
   const [invited, setInvited] = useState<UserProfile[]>([]);
   const [inviteSearch, setInviteSearch] = useState("");
   const [explanationDate, setExplanationDate] = useState<Date | undefined>();
+  const [openInvitePopover, setOpenInvitePopover] = useState(false);
 
   const isLanguage = languageSubjects.includes(subject);
 
@@ -178,6 +180,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
   const inviteClassmate = (classmate: UserProfile) => {
     setInvited(prev => [...prev, classmate]);
     setInviteSearch("");
+    setOpenInvitePopover(false);
   };
 
   const removeInvitation = (classmateToRemove: UserProfile) => {
@@ -211,12 +214,14 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
 
     setIsLoading(true);
     try {
+      const batch = writeBatch(firestore);
+
       const contributors: ExplanationContributor[] = [
         { userId: user.uid, userName: user.name, status: 'accepted' },
         ...invited.map(i => ({ userId: i.uid, userName: i.name, status: 'pending' as const }))
       ];
       
-      const explanationData = {
+      const explanationData: Omit<Explanation, 'id'> = {
         ownerId: user.uid,
         contributors,
         subject,
@@ -231,11 +236,31 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
       };
       
       const explanationsColRef = collection(firestore, 'classrooms', classroomId, 'explanations');
-      await addDoc(explanationsColRef, explanationData);
+      const newExplanationRef = doc(explanationsColRef);
+      batch.set(newExplanationRef, explanationData);
+      
+      // Create invitations for invited classmates
+      for (const invitedUser of invited) {
+        const invitationRef = doc(collection(firestore, 'users', invitedUser.uid, 'invitations'));
+        const invitationData = {
+          explanationId: newExplanationRef.id,
+          classroomId: classroomId,
+          fromUser: {
+            uid: user.uid,
+            name: user.name,
+          },
+          subject: subject,
+          explanationDate: explanationDate,
+          createdAt: serverTimestamp(),
+        };
+        batch.set(invitationRef, invitationData);
+      }
+      
+      await batch.commit();
 
       toast({
         title: "Success!",
-        description: `You've signed up to explain concepts for ${subject}.`,
+        description: `You've signed up to explain concepts for ${subject}. Invitations sent.`,
       });
 
       // Reset state and close dialog
@@ -359,33 +384,42 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
               Invite
             </Label>
              <div className="col-span-3">
-              <Popover>
+              <Popover open={openInvitePopover} onOpenChange={setOpenInvitePopover}>
                 <PopoverTrigger asChild>
                   <Input
                     id="invite-input"
                     placeholder="Search for a classmate by name..."
                     className="flex-1"
                     value={inviteSearch}
-                    onChange={(e) => setInviteSearch(e.target.value)}
+                    onChange={(e) => {
+                        setInviteSearch(e.target.value);
+                        if (!openInvitePopover) setOpenInvitePopover(true);
+                    }}
                   />
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                   <Command>
-                    <CommandInput placeholder="Search classmate..." />
-                    <CommandEmpty>No one found.</CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-32">
-                        {availableClassmates.map(c => (
-                          <CommandItem
-                            key={c.uid}
-                            onSelect={() => inviteClassmate(c)}
-                            className="cursor-pointer"
-                          >
-                            {c.name}
-                          </CommandItem>
-                        ))}
-                      </ScrollArea>
-                    </CommandGroup>
+                    <CommandInput placeholder="Search classmate..." value={inviteSearch} onValueChange={setInviteSearch} />
+                    <CommandList>
+                        <CommandEmpty>No one found.</CommandEmpty>
+                        <CommandGroup>
+                            {availableClassmates.map(c => (
+                            <CommandItem
+                                key={c.uid}
+                                onSelect={() => inviteClassmate(c)}
+                                className="cursor-pointer"
+                            >
+                                <Check
+                                className={cn(
+                                    "mr-2 h-4 w-4",
+                                    invited.some(i => i.uid === c.uid) ? "opacity-100" : "opacity-0"
+                                )}
+                                />
+                                {c.name}
+                            </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
@@ -579,5 +613,3 @@ export function SubjectCell({ subject, isEditing, onChange, user, classroomId, d
 
   return <div>{cellStructure}</div>;
 }
-
-    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser } from "@/firebase/auth/use-user";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { InvitationBell } from "./invitation-bell";
 
 export function Header() {
   const { user } = useUser();
@@ -31,6 +33,7 @@ export function Header() {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user.displayName || user.email}
             </span>
+            <InvitationBell currentUser={user} />
             <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
               <LogOut className="size-5" />
             </Button>

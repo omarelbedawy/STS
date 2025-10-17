@@ -46,3 +46,16 @@ export interface Explanation {
   completionStatus?: 'pending' | 'explained' | 'not-explained';
   createdAt: any; // Firestore timestamp
 }
+
+export interface Invitation {
+  id: string;
+  explanationId: string;
+  classroomId: string;
+  fromUser: {
+    uid: string;
+    name: string;
+  };
+  subject: string;
+  explanationDate: any; // Firestore Timestamp
+  createdAt: any; // Firestore Timestamp
+}
