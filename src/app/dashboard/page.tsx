@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Header } from "@/components/app/header";
@@ -78,6 +79,7 @@ export default function DashboardPage() {
         return <AdminDashboard admin={userProfile} />;
       case 'student':
       default:
+        // For students, we now directly render the ScheduleAnalyzer
         return <ScheduleAnalyzer />;
     }
   }
@@ -93,3 +95,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

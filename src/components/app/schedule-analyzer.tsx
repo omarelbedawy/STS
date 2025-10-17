@@ -135,24 +135,16 @@ export function ScheduleAnalyzer() {
   const isLoading = userLoading || userProfileLoading || classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading || scheduleHistoryLoading;
 
   useEffect(() => {
-    if (isLoading) {
-      setState("initializing");
-      return;
-    }
-  
-    // Once loading is complete, decide which state to be in.
-    // This effect should not interfere if the user is already in the process of uploading.
-    if (state === 'initializing' || state === 'displaying' || state === 'idle') {
+    if (!isLoading && (state === 'initializing' || state === 'displaying')) {
       if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
-        // If an active schedule exists, always display it.
         setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
         setState("displaying");
       } else {
-        // If there's no active schedule, go to the upload screen.
         setState("idle");
       }
     }
-  }, [isLoading, activeSchedule, state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, activeSchedule]);
   
   // Effect to automatically update explanation status
   useEffect(() => {
@@ -316,8 +308,6 @@ export function ScheduleAnalyzer() {
     
     const updatedScheduleData = {
       schedule: editableSchedule,
-      uploadedBy: userProfile.name,
-      uploadedAt: serverTimestamp(),
     };
 
     const scheduleDocRef = doc(firestore, 'classrooms', classroomId, 'schedules', activeSchedule.id);
@@ -519,7 +509,7 @@ function ReminderAlert({ explanations, currentUser }: { explanations: Explanatio
 
       const diff = differenceInDays(exp.explanationDate.toDate(), now);
       return diff >= 0 && diff <= 2; // Is today, tomorrow, or the day after
-    }).sort((a,b) => a.explanationDate.toDate() - b.explanationDate.toDate());
+    }).sort((a,b) => a.explanationDate.toDate().getTime() - b.explanationDate.toDate().getTime());
   }, [explanations, currentUser]);
 
   if (upcomingUserExplanations.length === 0) return null;
@@ -791,5 +781,7 @@ function UploadCard({
     </Card>
   );
 }
+
+    
 
     
