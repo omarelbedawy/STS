@@ -135,7 +135,7 @@ export function ScheduleAnalyzer() {
   const isLoading = userLoading || userProfileLoading || classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading || scheduleHistoryLoading;
 
   useEffect(() => {
-    if (!isLoading && (state === 'initializing' || state === 'displaying')) {
+    if (!isLoading && state === 'initializing') {
       if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
         setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
         setState("displaying");
@@ -143,9 +143,16 @@ export function ScheduleAnalyzer() {
         setState("idle");
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, activeSchedule]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, activeSchedule, state]);
   
+  useEffect(() => {
+    // This effect ensures that if the active schedule is removed, the view resets.
+    if (!isLoading && !activeSchedule) {
+        setState("idle");
+    }
+  }, [isLoading, activeSchedule]);
+
   // Effect to automatically update explanation status
   useEffect(() => {
     if (!firestore || !explanations || !activeSchedule?.schedule || !classroomId) return;
@@ -230,24 +237,10 @@ export function ScheduleAnalyzer() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
     setPreviewUrl(null);
-    // After reset, if a schedule exists, go to 'displaying', else 'idle'.
-    if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
-      setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
-      setState("displaying");
-    } else {
-      setState("idle");
-    }
+    setState("idle");
     setIsEditing(false);
   };
   
-
-  const toBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
 
   const onSubmit = async () => {
     if (!file || !classroomId || !userProfile?.name || !firestore) return;
@@ -269,14 +262,13 @@ export function ScheduleAnalyzer() {
 
         const classroomDoc = doc(firestore, 'classrooms', classroomId);
         await setDoc(classroomDoc, { activeScheduleId: newScheduleDocRef.id }, { merge: true });
-
-        // Optimistically update UI
-        setEditableSchedule(JSON.parse(JSON.stringify(analysisResult.schedule)));
-        setState("displaying");
+        
         toast({
-          title: "Schedule Updated",
-          description: `A new schedule version was uploaded by ${userProfile.name}.`,
+          title: "Schedule Uploaded & Set Active",
+          description: `The new schedule is now active for the class.`,
         });
+        setState("displaying");
+
       } else {
          throw new Error(analysisResult.errors || "The AI failed to return a valid response.");
       }
@@ -344,26 +336,34 @@ export function ScheduleAnalyzer() {
     const school = schoolList.find(s => s.id === userProfile.school);
     return `class ${userProfile.grade}${userProfile.class.toUpperCase()} at ${school?.name || 'your school'}`;
   }
-
-  const handleNewUpload = () => {
-    setState("idle");
-    setFile(null);
-    setPreviewUrl(null);
-    setEditableSchedule([]);
-    setIsEditing(false);
-    setShowHistory(false);
-  };
   
-  const handleRestoreVersion = async (scheduleId: string) => {
+  const handleSetActiveVersion = async (scheduleId: string) => {
       if (!firestore || !classroomId) return;
 
-      const classroomDoc = doc(firestore, 'classrooms', classroomId);
-      await updateDoc(classroomDoc, { activeScheduleId: scheduleId });
-      toast({
-          title: "Schedule Restored",
-          description: "An older version of the schedule is now active."
-      })
-      setShowHistory(false);
+      const classroomDocRef = doc(firestore, 'classrooms', classroomId);
+      try {
+        await updateDoc(classroomDocRef, { activeScheduleId: scheduleId });
+        toast({
+            title: "Schedule Set Active",
+            description: "This schedule is now visible to the class."
+        })
+        setShowHistory(false);
+        setState("initializing"); // Re-initialize to load the new active schedule
+      } catch (error) {
+        // If the classroom doc doesn't exist, create it
+        if ((error as any).code === 'not-found') {
+            await setDoc(classroomDocRef, { activeScheduleId: scheduleId });
+            toast({
+              title: "Schedule Set Active",
+              description: "This schedule is now visible to the class."
+            });
+            setShowHistory(false);
+            setState("initializing");
+        } else {
+          console.error("Error setting active schedule:", error);
+          toast({ variant: 'destructive', title: "Error", description: "Could not set active schedule."});
+        }
+      }
   }
 
   const handleDeleteVersion = async (scheduleId: string) => {
@@ -371,12 +371,13 @@ export function ScheduleAnalyzer() {
 
     try {
       // Prevent deleting the last remaining schedule
-      if (scheduleHistory.length <= 1) {
-        toast({
-          variant: "destructive",
-          title: "Cannot Delete",
-          description: "You cannot delete the only remaining schedule version.",
-        });
+      if (scheduleHistory.length <= 1 && scheduleHistory[0].id === scheduleId) {
+        if (classroom?.activeScheduleId === scheduleId) {
+            const classroomDocRef = doc(firestore, 'classrooms', classroomId);
+            await updateDoc(classroomDocRef, { activeScheduleId: "" });
+        }
+        await deleteDoc(doc(firestore, 'classrooms', classroomId, 'schedules', scheduleId));
+        toast({ title: "Last Schedule Deleted", description: "The classroom now has no schedules." });
         return;
       }
       
@@ -397,11 +398,9 @@ export function ScheduleAnalyzer() {
             return dateB - dateA;
         });
 
-        if (sortedRemaining.length > 0) {
-            const newActiveId = sortedRemaining[0].id;
-            const classroomDocRef = doc(firestore, 'classrooms', classroomId);
-            await updateDoc(classroomDocRef, { activeScheduleId: newActiveId });
-        }
+        const newActiveId = sortedRemaining.length > 0 ? sortedRemaining[0].id : "";
+        const classroomDocRef = doc(firestore, 'classrooms', classroomId);
+        await updateDoc(classroomDocRef, { activeScheduleId: newActiveId });
       }
 
     } catch (error) {
@@ -422,46 +421,11 @@ export function ScheduleAnalyzer() {
   if (state === "loading") {
     return <LoadingState isAnalyzing={true} />;
   }
-  
-  if (state === "idle" || state === "previewing") {
-    return (
-      <div className="flex gap-8 items-start">
-        <div className="flex-1">
-          <UploadCard
-            isDragging={isDragging}
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
-            fileInputRef={fileInputRef}
-            onFileChange={onFileChange}
-            state={state}
-            previewUrl={previewUrl}
-            onReset={onReset}
-            onSubmit={onSubmit}
-            schoolName={getSchoolName()}
-            hasExistingSchedule={!!activeSchedule}
-            onToggleHistory={() => setShowHistory(p => !p)}
-            isHistoryVisible={showHistory}
-          />
-        </div>
-         {showHistory && scheduleHistory && classroomId && (
-          <ScheduleHistory 
-            history={scheduleHistory}
-            activeScheduleId={classroom?.activeScheduleId}
-            onRestore={handleRestoreVersion}
-            onDelete={handleDeleteVersion}
-            classroomId={classroomId}
-          />
-        )}
-      </div>
-    );
-  }
 
-
-  if (state === "displaying") {
-    const currentSchedule = editableSchedule.length > 0 ? editableSchedule : activeSchedule?.schedule || [];
-    return (
-      <div className="flex gap-8 items-start">
+  const renderMainContent = () => {
+    if (state === 'displaying' && activeSchedule) {
+      const currentSchedule = editableSchedule.length > 0 ? editableSchedule : activeSchedule.schedule || [];
+       return (
         <div className="flex-1 space-y-8">
             <ReminderAlert explanations={explanations || []} currentUser={userProfile} />
             <ResultState
@@ -478,25 +442,45 @@ export function ScheduleAnalyzer() {
                 onScheduleChange={handleScheduleChange}
                 onSaveEdits={onSaveEdits}
                 schoolName={getSchoolName()}
-                onNewUpload={handleNewUpload}
-                onToggleHistory={() => setShowHistory(p => !p)}
-                isHistoryVisible={showHistory}
+                onNewUpload={() => setState('idle')}
             />
         </div>
-        {showHistory && scheduleHistory && classroomId && (
-          <ScheduleHistory 
-            history={scheduleHistory}
-            activeScheduleId={classroom?.activeScheduleId}
-            onRestore={handleRestoreVersion}
-            onDelete={handleDeleteVersion}
-            classroomId={classroomId}
-          />
-        )}
+       )
+    }
+    // Otherwise, show upload UI (for idle and previewing states)
+     return (
+      <div className="flex-1">
+        <UploadCard
+          isDragging={isDragging}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          fileInputRef={fileInputRef}
+          onFileChange={onFileChange}
+          state={state}
+          previewUrl={previewUrl}
+          onReset={onReset}
+          onSubmit={onSubmit}
+          schoolName={getSchoolName()}
+        />
       </div>
     );
   }
 
-  return null;
+  return (
+    <div className="flex gap-8 items-start">
+        {renderMainContent()}
+        <div className="w-full max-w-sm sticky top-24">
+            <ScheduleHistory 
+                history={scheduleHistory || []}
+                activeScheduleId={classroom?.activeScheduleId}
+                onSetActive={handleSetActiveVersion}
+                onDelete={handleDeleteVersion}
+                classroomId={classroomId}
+            />
+        </div>
+    </div>
+  );
 }
 
 function ReminderAlert({ explanations, currentUser }: { explanations: Explanation[], currentUser: UserProfile | null }) {
@@ -541,7 +525,7 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   useEffect(() => {
     if (!isAnalyzing) {
       setMessage("Loading workspace...");
-      setProgress(0); // Show a generic loader, maybe?
+      setProgress(0);
       return;
     };
 
@@ -588,7 +572,7 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   );
 }
 
-function ResultState({ user, classroomId, activeSchedule, editableSchedule, classmates, explanations, onCopy, isCopied, isEditing, setIsEditing, onScheduleChange, onSaveEdits, schoolName, onNewUpload, onToggleHistory, isHistoryVisible }: {
+function ResultState({ user, classroomId, activeSchedule, editableSchedule, classmates, explanations, onCopy, isCopied, isEditing, setIsEditing, onScheduleChange, onSaveEdits, schoolName, onNewUpload }: {
   user: UserProfile | null;
   classroomId: string | null;
   activeSchedule: ClassroomSchedule | null | undefined;
@@ -603,8 +587,6 @@ function ResultState({ user, classroomId, activeSchedule, editableSchedule, clas
   onSaveEdits: () => void;
   schoolName: string;
   onNewUpload: () => void;
-  onToggleHistory: () => void;
-  isHistoryVisible: boolean;
 }) {
   const lastUpdated = activeSchedule?.uploadedAt
     ? activeSchedule.uploadedAt.toDate().toLocaleString()
@@ -636,9 +618,6 @@ function ResultState({ user, classroomId, activeSchedule, editableSchedule, clas
                 <Copy />
               )}
               {isCopied ? "Copied!" : "Copy Text"}
-            </Button>
-            <Button onClick={onToggleHistory} variant={isHistoryVisible ? "default" : "outline"} size="icon" title="Toggle History">
-                <History />
             </Button>
           </div>
         </div>
@@ -684,9 +663,6 @@ function UploadCard({
   onReset,
   onSubmit,
   schoolName,
-  hasExistingSchedule,
-  onToggleHistory,
-  isHistoryVisible
 }: {
   isDragging: boolean;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
@@ -699,9 +675,6 @@ function UploadCard({
   onReset: () => void;
   onSubmit: () => void;
   schoolName: string;
-  hasExistingSchedule: boolean;
-  onToggleHistory: () => void;
-  isHistoryVisible: boolean;
 }) {
   return (
     <Card
@@ -716,14 +689,9 @@ function UploadCard({
       <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle>{hasExistingSchedule ? "Upload a New Schedule" : "No Schedule Found"}</CardTitle>
-              <CardDescription>{hasExistingSchedule ? `Upload a new image to replace the current schedule for ${schoolName}.` : `The schedule for ${schoolName} has not been uploaded yet. Be the first!`}</CardDescription>
+              <CardTitle>No Active Schedule</CardTitle>
+              <CardDescription>Upload a new schedule or set one as active from the history panel.</CardDescription>
             </div>
-            {hasExistingSchedule && (
-                <Button onClick={onToggleHistory} variant={isHistoryVisible ? "default" : "outline"} size="sm">
-                    <History className="mr-2"/> View History
-                </Button>
-            )}
           </div>
       </CardHeader>
       <CardContent className="p-6">
@@ -773,7 +741,7 @@ function UploadCard({
               onClick={onSubmit}
               className="w-full max-w-md bg-accent text-accent-foreground hover:bg-accent/90"
             >
-              Analyze Schedule
+              Analyze and Set Active
             </Button>
           </div>
         )}

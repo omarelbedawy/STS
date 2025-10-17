@@ -23,13 +23,13 @@ import {
 export function ScheduleHistory({
     history,
     activeScheduleId,
-    onRestore,
+    onSetActive,
     onDelete,
     classroomId,
 }: {
     history: ClassroomSchedule[];
     activeScheduleId?: string;
-    onRestore: (scheduleId: string) => void;
+    onSetActive: (scheduleId: string) => void;
     onDelete: (scheduleId: string) => void;
     classroomId: string;
 }) {
@@ -78,20 +78,20 @@ export function ScheduleHistory({
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <Button variant="ghost" size="sm" className="h-7">
-                                                            <RotateCw className="mr-2 size-3"/> Restore
+                                                            <RotateCw className="mr-2 size-3"/> Set Active
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle>Restore this version?</AlertDialogTitle>
+                                                            <AlertDialogTitle>Set this version as active?</AlertDialogTitle>
                                                             <AlertDialogDescription>
                                                                 This will make the schedule uploaded by {item.uploadedBy} on {uploadedAtDate?.toLocaleDateString()} the active schedule for the class.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => onRestore(item.id)}>
-                                                                Yes, Restore
+                                                            <AlertDialogAction onClick={() => onSetActive(item.id)}>
+                                                                Yes, Set Active
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
