@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { auth } from "@/firebase/auth/client";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +68,8 @@ export default function AdminSignUpPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
+      await sendEmailVerification(user);
+
 
       const userProfile = {
         name: values.name,
@@ -88,7 +90,7 @@ export default function AdminSignUpPage() {
       
       toast({
         title: "Admin Account Created",
-        description: "Welcome, administrator. You have been successfully signed up.",
+        description: "Welcome, administrator. A verification email has been sent to your inbox.",
       });
 
       router.push("/dashboard");
