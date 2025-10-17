@@ -134,7 +134,12 @@ export function ScheduleAnalyzer() {
   const isLoading = userLoading || userProfileLoading || classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading || scheduleHistoryLoading;
 
   useEffect(() => {
-    if (state === 'loading' && !isLoading) {
+    if (isLoading) {
+      setState('loading');
+      return;
+    }
+
+    if (state === 'loading') {
       if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
         setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
         setState('displaying');
@@ -143,20 +148,6 @@ export function ScheduleAnalyzer() {
       }
     }
   }, [state, isLoading, activeSchedule]);
-  
-  useEffect(() => {
-    if (isLoading || ['loading', 'uploading', 'previewing'].includes(state)) return;
-
-    const hasActiveSchedule = activeSchedule?.schedule && activeSchedule.schedule.length > 0;
-
-    if (hasActiveSchedule && state === 'idle') {
-      setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
-      setState('displaying');
-    } else if (!hasActiveSchedule && state === 'displaying') {
-      setState('idle');
-    }
-  }, [isLoading, activeSchedule, state]);
-
 
   // Effect to automatically update explanation status
   useEffect(() => {
@@ -237,20 +228,6 @@ export function ScheduleAnalyzer() {
     handleFileSelect(e.dataTransfer.files?.[0] ?? null);
   };
 
-  const onReset = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setFile(null);
-    setPreviewUrl(null);
-    // If there was an active schedule before, go back to displaying it. Otherwise, idle.
-    if (activeSchedule) {
-        setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
-        setState('displaying');
-    } else {
-        setState('idle');
-    }
-    setIsEditing(false);
-  };
-
   const onEnterUploadMode = () => {
     setState('idle');
     setIsEditing(false);
@@ -259,6 +236,9 @@ export function ScheduleAnalyzer() {
   };
 
   const onCancelUpload = () => {
+    setFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
     // If there's an active schedule, go back to displaying it. Otherwise go to idle.
     if (activeSchedule) {
       setState('displaying');
@@ -764,3 +744,4 @@ const toBase64 = (file: File): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+
