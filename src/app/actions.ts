@@ -18,7 +18,7 @@ export async function analyzeScheduleAction(
     const result = await analyzeScheduleFromImage(input);
     return result;
   } catch (e: any) {
-    console.error('Error analyzing schedule:', e);
+    console.error('Error in analyzeScheduleAction:', e);
     // Return a structured error that the client can display
     return {
       schedule: [],
