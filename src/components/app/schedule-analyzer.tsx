@@ -14,6 +14,7 @@ import {
   History,
   BellRing,
   Upload,
+  ArrowLeft,
 } from 'lucide-react';
 
 import { analyzeScheduleAction } from '@/app/actions';
@@ -152,7 +153,7 @@ export function ScheduleAnalyzer() {
 
     const hasActiveSchedule = activeSchedule?.schedule && activeSchedule.schedule.length > 0;
 
-    if (hasActiveSchedule && state !== 'displaying') {
+    if (hasActiveSchedule && state === 'idle') {
       setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
       setState('displaying');
     } else if (!hasActiveSchedule && state === 'displaying') {
@@ -247,6 +248,7 @@ export function ScheduleAnalyzer() {
     setPreviewUrl(null);
     // If there was an active schedule before, go back to displaying it. Otherwise, idle.
     if (activeSchedule) {
+        setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
         setState('displaying');
     } else {
         setState('idle');
@@ -280,7 +282,8 @@ export function ScheduleAnalyzer() {
           title: 'Schedule Uploaded & Set Active',
           description: `The new schedule is now active for the class.`,
         });
-        setState('displaying');
+        // After submitting, reset goes back to the 'displaying' state with the new schedule
+        onReset();
 
       } else {
          throw new Error(analysisResult.errors || 'The AI failed to return a valid response.');
@@ -473,6 +476,7 @@ export function ScheduleAnalyzer() {
           onReset={onReset}
           onSubmit={onSubmit}
           schoolName={getSchoolName()}
+          hasActiveSchedule={!!activeSchedule}
         />
       </div>
     );
@@ -677,6 +681,7 @@ function UploadCard({
   onReset,
   onSubmit,
   schoolName,
+  hasActiveSchedule,
 }: {
   isDragging: boolean;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
@@ -689,6 +694,7 @@ function UploadCard({
   onReset: () => void;
   onSubmit: () => void;
   schoolName: string;
+  hasActiveSchedule: boolean;
 }) {
   return (
     <Card
@@ -703,9 +709,15 @@ function UploadCard({
       <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle>No Active Schedule</CardTitle>
-              <CardDescription>Upload a new schedule or set one as active from the history panel.</CardDescription>
+              <CardTitle>Upload New Schedule</CardTitle>
+              <CardDescription>Upload an image to create a new active schedule for the class.</CardDescription>
             </div>
+            {hasActiveSchedule && (
+                 <Button onClick={onReset} variant="outline">
+                    <ArrowLeft className="mr-2" />
+                    Cancel
+                </Button>
+            )}
           </div>
       </CardHeader>
       <CardContent className="p-6">
@@ -772,5 +784,7 @@ const toBase64 = (file: File): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+
+    
 
     
