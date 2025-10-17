@@ -1,8 +1,8 @@
 
-"use client";
+'use client';
 
-import type { AnalyzeScheduleFromImageOutput } from "@/ai/flows/analyze-schedule-from-image";
-import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { AnalyzeScheduleFromImageOutput } from '@/ai/flows/analyze-schedule-from-image';
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   Copy,
@@ -13,10 +13,11 @@ import {
   X,
   History,
   BellRing,
-} from "lucide-react";
+  Upload,
+} from 'lucide-react';
 
-import { analyzeScheduleAction } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { analyzeScheduleAction } from '@/app/actions';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -24,28 +25,28 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { ScheduleTable } from "./schedule-table";
-import { useUser } from "@/firebase/auth/use-user";
-import { useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, setDoc, serverTimestamp, collection, query, where, writeBatch, updateDoc, addDoc, deleteDoc } from "firebase/firestore";
-import type { UserProfile, Explanation, ClassroomSchedule } from "@/lib/types";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
-import { schoolList } from "@/lib/schools";
-import { ClassmatesDashboard } from "./classmates-dashboard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScheduleHistory } from "./schedule-history";
-import { differenceInDays, formatDistanceToNowStrict } from "date-fns";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+} from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import Image from 'next/image';
+import { ScheduleTable } from './schedule-table';
+import { useUser } from '@/firebase/auth/use-user';
+import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, setDoc, serverTimestamp, collection, query, where, writeBatch, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import type { UserProfile, Explanation, ClassroomSchedule } from '@/lib/types';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { schoolList } from '@/lib/schools';
+import { ClassmatesDashboard } from './classmates-dashboard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScheduleHistory } from './schedule-history';
+import { differenceInDays, formatDistanceToNowStrict } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
-type AnalysisState = "idle" | "previewing" | "loading" | "displaying" | "initializing";
-type ScheduleRow = AnalyzeScheduleFromImageOutput["schedule"][number];
+type AnalysisState = 'idle' | 'previewing' | 'loading' | 'displaying' | 'initializing';
+type ScheduleRow = AnalyzeScheduleFromImageOutput['schedule'][number];
 
 interface Classroom {
     activeScheduleId?: string;
@@ -59,11 +60,11 @@ const getSessionEndTime = (
   const sessionRow = schedule.find((r) => r.session === session);
   if (!sessionRow || !sessionRow.time) return null;
   // Handles time formats like "7:45–9:05" or "13:45–15:00"
-  const timeParts = sessionRow.time.split("–");
+  const timeParts = sessionRow.time.split('–');
   if (timeParts.length < 2) return null;
 
   const endTimeStr = timeParts[1].trim();
-  const [hours, minutes] = endTimeStr.split(":").map(Number);
+  const [hours, minutes] = endTimeStr.split(':').map(Number);
   
   if (isNaN(hours) || isNaN(minutes)) return null;
 
@@ -74,7 +75,7 @@ const getSessionEndTime = (
 export function ScheduleAnalyzer() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
-  const [state, setState] = useState<AnalysisState>("initializing");
+  const [state, setState] = useState<AnalysisState>('initializing');
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -82,12 +83,11 @@ export function ScheduleAnalyzer() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
 
   const userProfileQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return doc(firestore, "users", user.uid);
+    return doc(firestore, 'users', user.uid);
   }, [firestore, user?.uid]);
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
@@ -118,10 +118,10 @@ export function ScheduleAnalyzer() {
   const classmatesQuery = useMemoFirebase(() => {
     if (!firestore || !userProfile) return null;
     return query(
-      collection(firestore, "users"),
-      where("school", "==", userProfile.school),
-      where("grade", "==", userProfile.grade),
-      where("class", "==", userProfile.class)
+      collection(firestore, 'users'),
+      where('school', '==', userProfile.school),
+      where('grade', '==', userProfile.grade),
+      where('class', '==', userProfile.class)
     );
   }, [firestore, userProfile?.school, userProfile?.grade, userProfile?.class]);
   const { data: classmates, loading: classmatesLoading } = useCollection<UserProfile>(classmatesQuery);
@@ -135,22 +135,30 @@ export function ScheduleAnalyzer() {
   const isLoading = userLoading || userProfileLoading || classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading || scheduleHistoryLoading;
 
   useEffect(() => {
-    if (!isLoading && state === 'initializing') {
+    if (state === 'initializing' && !isLoading) {
       if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
         setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
-        setState("displaying");
+        setState('displaying');
       } else {
-        setState("idle");
+        setState('idle');
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, activeSchedule, state]);
+  }, [state, isLoading, activeSchedule]);
   
   useEffect(() => {
-    // This effect ensures that if the active schedule is removed, the view resets.
-    if (!isLoading && !activeSchedule) {
-        setState("idle");
+    // This effect ensures that if the active schedule is changed or removed from another client,
+    // the current view updates accordingly. We avoid running this if we're in a loading or previewing state.
+    if (isLoading || state === 'loading' || state === 'previewing') return;
+
+    const hasActiveSchedule = activeSchedule?.schedule && activeSchedule.schedule.length > 0;
+
+    if (hasActiveSchedule && state !== 'displaying') {
+      setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
+      setState('displaying');
+    } else if (!hasActiveSchedule && state === 'displaying') {
+      setState('idle');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, activeSchedule]);
 
   // Effect to automatically update explanation status
@@ -184,7 +192,7 @@ export function ScheduleAnalyzer() {
         try {
           await batch.commit();
         } catch (error) {
-          console.error("Error auto-updating explanation statuses:", error);
+          console.error('Error auto-updating explanation statuses:', error);
         }
       }
     };
@@ -199,16 +207,16 @@ export function ScheduleAnalyzer() {
 
 
   const handleFileSelect = (selectedFile: File | null) => {
-    if (selectedFile && selectedFile.type.startsWith("image/")) {
+    if (selectedFile && selectedFile.type.startsWith('image/')) {
       setFile(selectedFile);
       const url = URL.createObjectURL(selectedFile);
       setPreviewUrl(url);
-      setState("previewing");
+      setState('previewing');
     } else {
       toast({
-        title: "Invalid File Type",
-        description: "Please upload an image file (e.g., PNG, JPG, GIF).",
-        variant: "destructive",
+        title: 'Invalid File Type',
+        description: 'Please upload an image file (e.g., PNG, JPG, GIF).',
+        variant: 'destructive',
       });
     }
   };
@@ -237,14 +245,19 @@ export function ScheduleAnalyzer() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
     setPreviewUrl(null);
-    setState("idle");
+    // If there was an active schedule before, go back to displaying it. Otherwise, idle.
+    if (activeSchedule) {
+        setState('displaying');
+    } else {
+        setState('idle');
+    }
     setIsEditing(false);
   };
   
 
   const onSubmit = async () => {
     if (!file || !classroomId || !userProfile?.name || !firestore) return;
-    setState("loading");
+    setState('loading');
     try {
       const base64Image = await toBase64(file);
       const analysisResult = await analyzeScheduleAction({ scheduleImage: base64Image });
@@ -264,24 +277,24 @@ export function ScheduleAnalyzer() {
         await setDoc(classroomDoc, { activeScheduleId: newScheduleDocRef.id }, { merge: true });
         
         toast({
-          title: "Schedule Uploaded & Set Active",
+          title: 'Schedule Uploaded & Set Active',
           description: `The new schedule is now active for the class.`,
         });
-        setState("displaying");
+        setState('displaying');
 
       } else {
-         throw new Error(analysisResult.errors || "The AI failed to return a valid response.");
+         throw new Error(analysisResult.errors || 'The AI failed to return a valid response.');
       }
     } catch (error) {
       console.error(error);
-      const errorMessage = error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
       toast({
-        title: "Analysis Error",
+        title: 'Analysis Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
       // Go back to previewing state on error, instead of idle.
-      setState("previewing");
+      setState('previewing');
     }
   };
   
@@ -315,8 +328,8 @@ export function ScheduleAnalyzer() {
 
     setIsEditing(false);
     toast({
-      title: "Schedule Saved",
-      description: "Your changes have been saved for this schedule version.",
+      title: 'Schedule Saved',
+      description: 'Your changes have been saved for this schedule version.',
     });
   };
 
@@ -332,7 +345,7 @@ export function ScheduleAnalyzer() {
   };
 
   const getSchoolName = () => {
-    if (!userProfile) return "your class";
+    if (!userProfile) return 'your class';
     const school = schoolList.find(s => s.id === userProfile.school);
     return `class ${userProfile.grade}${userProfile.class.toUpperCase()} at ${school?.name || 'your school'}`;
   }
@@ -344,24 +357,22 @@ export function ScheduleAnalyzer() {
       try {
         await updateDoc(classroomDocRef, { activeScheduleId: scheduleId });
         toast({
-            title: "Schedule Set Active",
-            description: "This schedule is now visible to the class."
+            title: 'Schedule Set Active',
+            description: 'This schedule is now visible to the class.'
         })
-        setShowHistory(false);
-        setState("initializing"); // Re-initialize to load the new active schedule
+        setState('initializing'); // Re-initialize to load the new active schedule
       } catch (error) {
         // If the classroom doc doesn't exist, create it
         if ((error as any).code === 'not-found') {
             await setDoc(classroomDocRef, { activeScheduleId: scheduleId });
             toast({
-              title: "Schedule Set Active",
-              description: "This schedule is now visible to the class."
+              title: 'Schedule Set Active',
+              description: 'This schedule is now visible to the class.'
             });
-            setShowHistory(false);
-            setState("initializing");
+            setState('initializing');
         } else {
-          console.error("Error setting active schedule:", error);
-          toast({ variant: 'destructive', title: "Error", description: "Could not set active schedule."});
+          console.error('Error setting active schedule:', error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not set active schedule.'});
         }
       }
   }
@@ -374,10 +385,10 @@ export function ScheduleAnalyzer() {
       if (scheduleHistory.length <= 1 && scheduleHistory[0].id === scheduleId) {
         if (classroom?.activeScheduleId === scheduleId) {
             const classroomDocRef = doc(firestore, 'classrooms', classroomId);
-            await updateDoc(classroomDocRef, { activeScheduleId: "" });
+            await updateDoc(classroomDocRef, { activeScheduleId: '' });
         }
         await deleteDoc(doc(firestore, 'classrooms', classroomId, 'schedules', scheduleId));
-        toast({ title: "Last Schedule Deleted", description: "The classroom now has no schedules." });
+        toast({ title: 'Last Schedule Deleted', description: 'The classroom now has no schedules.' });
         return;
       }
       
@@ -385,8 +396,8 @@ export function ScheduleAnalyzer() {
       await deleteDoc(scheduleToDeleteRef);
 
       toast({
-        title: "Version Deleted",
-        description: "The schedule version has been permanently removed.",
+        title: 'Version Deleted',
+        description: 'The schedule version has been permanently removed.',
       });
 
       // If the deleted version was the active one, set the most recent one as active
@@ -398,17 +409,17 @@ export function ScheduleAnalyzer() {
             return dateB - dateA;
         });
 
-        const newActiveId = sortedRemaining.length > 0 ? sortedRemaining[0].id : "";
+        const newActiveId = sortedRemaining.length > 0 ? sortedRemaining[0].id : '';
         const classroomDocRef = doc(firestore, 'classrooms', classroomId);
         await updateDoc(classroomDocRef, { activeScheduleId: newActiveId });
       }
 
     } catch (error) {
-      console.error("Error deleting schedule version:", error);
+      console.error('Error deleting schedule version:', error);
       toast({
-        variant: "destructive",
-        title: "Deletion Failed",
-        description: "Could not delete the schedule version. Please try again.",
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: 'Could not delete the schedule version. Please try again.',
       });
     }
   };
@@ -418,7 +429,7 @@ export function ScheduleAnalyzer() {
     return <LoadingState isAnalyzing={false} />;
   }
 
-  if (state === "loading") {
+  if (state === 'loading') {
     return <LoadingState isAnalyzing={true} />;
   }
 
@@ -468,15 +479,17 @@ export function ScheduleAnalyzer() {
   }
 
   return (
-    <div className="flex gap-8 items-start">
-        {renderMainContent()}
-        <div className="w-full max-w-sm sticky top-24">
+    <div className="flex flex-col md:flex-row gap-8 items-start">
+        <div className="w-full md:flex-1 order-2 md:order-1">
+          {renderMainContent()}
+        </div>
+        <div className="w-full md:max-w-sm md:sticky top-24 order-1 md:order-2">
             <ScheduleHistory 
                 history={scheduleHistory || []}
                 activeScheduleId={classroom?.activeScheduleId}
                 onSetActive={handleSetActiveVersion}
                 onDelete={handleDeleteVersion}
-                classroomId={classroomId}
+                classroomId={classroomId || ''}
             />
         </div>
     </div>
@@ -519,22 +532,22 @@ function ReminderAlert({ explanations, currentUser }: { explanations: Explanatio
 function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState(
-    isAnalyzing ? "Analyzing your schedule..." : "Loading schedule..."
+    isAnalyzing ? 'Analyzing your schedule...' : 'Loading schedule...'
   );
 
   useEffect(() => {
     if (!isAnalyzing) {
-      setMessage("Loading workspace...");
+      setMessage('Loading workspace...');
       setProgress(0);
       return;
     };
 
     const messages = [
-      "Extracting text from image...",
-      "Identifying subjects and times...",
-      "Checking for ambiguities...",
-      "Formatting the schedule...",
-      "Almost there...",
+      'Extracting text from image...',
+      'Identifying subjects and times...',
+      'Checking for ambiguities...',
+      'Formatting the schedule...',
+      'Almost there...',
     ];
 
     const interval = setInterval(() => {
@@ -545,7 +558,7 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
         }
         const next = prev + 5;
         const messageIndex = Math.floor(next / (100 / messages.length));
-        setMessage(messages[messageIndex] || "Finalizing...");
+        setMessage(messages[messageIndex] || 'Finalizing...');
         return next;
       });
     }, 800);
@@ -554,13 +567,13 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   }, [isAnalyzing]);
 
   return (
-    <Card>
+    <Card className="flex-1">
       <CardHeader>
-        <CardTitle>{isAnalyzing ? "Analyzing..." : "Loading Workspace..."}</CardTitle>
+        <CardTitle>{isAnalyzing ? 'Analyzing...' : 'Loading Workspace...'}</CardTitle>
         <CardDescription>
           {isAnalyzing
-            ? "Please wait while the AI processes your schedule image."
-            : "Please wait while we fetch the latest data for your class."}
+            ? 'Please wait while the AI processes your schedule image.'
+            : 'Please wait while we fetch the latest data for your class.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-center space-y-4 py-16 text-center">
@@ -605,11 +618,12 @@ function ResultState({ user, classroomId, activeSchedule, editableSchedule, clas
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={onNewUpload} variant="outline">
+              <Upload className="mr-2" />
               Upload New Version
             </Button>
             <Button onClick={isEditing ? onSaveEdits : () => setIsEditing(true)} variant="outline" className="w-28">
               {isEditing ? <Save /> : <Pencil />}
-              {isEditing ? "Save" : "Edit"}
+              {isEditing ? 'Save' : 'Edit'}
             </Button>
             <Button onClick={onCopy} variant="secondary" className="w-28" disabled={isEditing}>
               {isCopied ? (
@@ -617,7 +631,7 @@ function ResultState({ user, classroomId, activeSchedule, editableSchedule, clas
               ) : (
                 <Copy />
               )}
-              {isCopied ? "Copied!" : "Copy Text"}
+              {isCopied ? 'Copied!' : 'Copy Text'}
             </Button>
           </div>
         </div>
@@ -679,8 +693,8 @@ function UploadCard({
   return (
     <Card
       className={cn(
-        "border-2 border-dashed transition-colors w-full",
-        isDragging && "border-primary bg-primary/10"
+        'border-2 border-dashed transition-colors w-full',
+        isDragging && 'border-primary bg-primary/10'
       )}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -702,7 +716,7 @@ function UploadCard({
           className="hidden"
           accept="image/*"
         />
-        {state === "idle" && (
+        {state === 'idle' && (
           <div className="flex flex-col items-center justify-center space-y-4 py-16 text-center">
             <div className="rounded-full border border-dashed bg-secondary p-4">
               <UploadCloud className="size-10 text-muted-foreground" />
@@ -718,7 +732,7 @@ function UploadCard({
             </Button>
           </div>
         )}
-        {state === "previewing" && previewUrl && (
+        {state === 'previewing' && previewUrl && (
           <div className="flex flex-col items-center gap-6">
             <div className="relative w-full max-w-md rounded-lg border p-2 shadow-sm">
               <Image
@@ -750,6 +764,13 @@ function UploadCard({
   );
 }
 
-    
+// Helper to convert file to base64
+const toBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
 
     

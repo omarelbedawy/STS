@@ -1,13 +1,13 @@
 
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import type { ClassroomSchedule } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { ClassroomSchedule } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { History, CheckCircle, Upload, RotateCw, Trash2 } from "lucide-react";
+import { History, CheckCircle, Upload, RotateCw, Trash2 } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,7 +18,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
     AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 
 export function ScheduleHistory({
     history,
@@ -41,7 +41,7 @@ export function ScheduleHistory({
     });
 
     return (
-        <Card className="w-full max-w-sm sticky top-24">
+        <Card className="w-full">
             <CardHeader>
                 <div className="flex items-center gap-3">
                     <History className="size-6 text-primary" />
@@ -57,10 +57,10 @@ export function ScheduleHistory({
                         {sortedHistory.map((item) => {
                             const is_active = item.id === activeScheduleId;
                             const uploadedAtDate = item.uploadedAt?.toDate();
-                            const timeAgo = uploadedAtDate ? formatDistanceToNow(uploadedAtDate, { addSuffix: true }) : "a while ago";
+                            const timeAgo = uploadedAtDate ? formatDistanceToNow(uploadedAtDate, { addSuffix: true }) : 'a while ago';
 
                             return (
-                                <div key={item.id} className={cn("rounded-lg border p-3 transition-all", is_active ? "bg-primary/10 border-primary" : "bg-card")}>
+                                <div key={item.id} className={cn('rounded-lg border p-3 transition-all', is_active ? 'bg-primary/10 border-primary' : 'bg-card')}>
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="text-sm font-medium flex items-center gap-2">
