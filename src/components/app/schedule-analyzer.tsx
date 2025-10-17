@@ -11,6 +11,7 @@ import {
   Save,
   UploadCloud,
   X,
+  History,
 } from "lucide-react";
 
 import { analyzeScheduleAction } from "@/app/actions";
@@ -30,21 +31,20 @@ import Image from "next/image";
 import { ScheduleTable } from "./schedule-table";
 import { useUser } from "@/firebase/auth/use-user";
 import { useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, setDoc, serverTimestamp, collection, query, where, writeBatch, updateDoc } from "firebase/firestore";
-import type { UserProfile, Explanation } from "@/lib/types";
+import { doc, setDoc, serverTimestamp, collection, query, where, writeBatch, updateDoc, addDoc } from "firebase/firestore";
+import type { UserProfile, Explanation, ClassroomSchedule } from "@/lib/types";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { schoolList } from "@/lib/schools";
 import { ClassmatesDashboard } from "./classmates-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScheduleHistory } from "./schedule-history";
 
 type AnalysisState = "idle" | "previewing" | "loading" | "displaying" | "initializing";
 type ScheduleRow = AnalyzeScheduleFromImageOutput["schedule"][number];
 
-interface ClassroomSchedule {
-  schedule: ScheduleRow[];
-  lastUpdatedBy?: string;
-  updatedAt?: any;
+interface Classroom {
+    activeScheduleId?: string;
 }
 
 // Helper to get the end time of a session
@@ -78,6 +78,7 @@ export function ScheduleAnalyzer() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
 
   const userProfileQuery = useMemoFirebase(() => {
@@ -95,7 +96,20 @@ export function ScheduleAnalyzer() {
     if (!firestore || !classroomId) return null;
     return doc(firestore, 'classrooms', classroomId);
   }, [firestore, classroomId]);
-  const { data: classroomSchedule, loading: classroomLoading } = useDoc<ClassroomSchedule>(classroomDocRef);
+  const { data: classroom, loading: classroomLoading } = useDoc<Classroom>(classroomDocRef);
+
+  const activeScheduleDocRef = useMemoFirebase(() => {
+    if (!firestore || !classroomId || !classroom?.activeScheduleId) return null;
+    return doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId);
+  }, [firestore, classroomId, classroom?.activeScheduleId]);
+  const { data: activeSchedule, loading: activeScheduleLoading } = useDoc<ClassroomSchedule>(activeScheduleDocRef);
+
+  const scheduleHistoryQuery = useMemoFirebase(() => {
+    if (!firestore || !classroomId) return null;
+    return collection(firestore, 'classrooms', classroomId, 'schedules');
+  }, [firestore, classroomId]);
+  const { data: scheduleHistory, loading: scheduleHistoryLoading } = useCollection<ClassroomSchedule>(scheduleHistoryQuery);
+
 
   const classmatesQuery = useMemoFirebase(() => {
     if (!firestore || !userProfile) return null;
@@ -114,7 +128,7 @@ export function ScheduleAnalyzer() {
   }, [firestore, classroomId]);
   const { data: explanations, loading: explanationsLoading } = useCollection<Explanation>(explanationsQuery);
 
-  const isLoading = userLoading || userProfileLoading || classroomLoading || classmatesLoading || explanationsLoading;
+  const isLoading = userLoading || userProfileLoading || classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading || scheduleHistoryLoading;
 
   useEffect(() => {
     if (isLoading) {
@@ -124,18 +138,18 @@ export function ScheduleAnalyzer() {
     
     // This effect should not interfere if the user is in the process of uploading.
     if (state === 'initializing' || state === 'displaying') {
-        if (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) {
-            setEditableSchedule(JSON.parse(JSON.stringify(classroomSchedule.schedule)));
+        if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
+            setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
             setState("displaying");
         } else {
             setState("idle");
         }
     }
-  }, [isLoading, classroomSchedule, user?.uid, state]);
+  }, [isLoading, activeSchedule, user?.uid, state]);
   
   // Effect to automatically update explanation status
   useEffect(() => {
-    if (!firestore || !explanations || !classroomSchedule?.schedule || !classroomId) return;
+    if (!firestore || !explanations || !activeSchedule?.schedule || !classroomId) return;
 
     const checkAndUpdateStatuses = async () => {
       const now = new Date();
@@ -147,7 +161,7 @@ export function ScheduleAnalyzer() {
       let updatesMade = 0;
 
       for (const exp of upcomingExplanations) {
-        const sessionEndTime = getSessionEndTime(exp.session, classroomSchedule.schedule);
+        const sessionEndTime = getSessionEndTime(exp.session, activeSchedule.schedule);
         if (!sessionEndTime || !exp.explanationDate) continue;
 
         const explanationEndDateTime = new Date(exp.explanationDate.toDate());
@@ -175,7 +189,7 @@ export function ScheduleAnalyzer() {
 
     return () => clearInterval(intervalId);
 
-  }, [explanations, classroomSchedule, firestore, classroomId]);
+  }, [explanations, activeSchedule, firestore, classroomId]);
 
 
   const handleFileSelect = (selectedFile: File | null) => {
@@ -218,8 +232,8 @@ export function ScheduleAnalyzer() {
     setFile(null);
     setPreviewUrl(null);
     // After reset, if a schedule exists, go to 'displaying', else 'idle'.
-    if (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) {
-      setEditableSchedule(JSON.parse(JSON.stringify(classroomSchedule.schedule)));
+    if (activeSchedule?.schedule && activeSchedule.schedule.length > 0) {
+      setEditableSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
       setState("displaying");
     } else {
       setState("idle");
@@ -237,34 +251,32 @@ export function ScheduleAnalyzer() {
     });
 
   const onSubmit = async () => {
-    if (!file || !classroomDocRef || !userProfile?.name) return;
+    if (!file || !classroomId || !userProfile?.name || !firestore) return;
     setState("loading");
     try {
       const base64Image = await toBase64(file);
       const analysisResult = await analyzeScheduleAction({ scheduleImage: base64Image });
 
       if (analysisResult.schedule && analysisResult.schedule.length > 0) {
-        const newScheduleData = {
+        
+        const newScheduleData: Omit<ClassroomSchedule, 'id'> = {
           schedule: analysisResult.schedule,
-          lastUpdatedBy: userProfile.name,
-          updatedAt: serverTimestamp(),
+          uploadedBy: userProfile.name,
+          uploadedAt: serverTimestamp(),
         };
 
-        setDoc(classroomDocRef, newScheduleData, { merge: true }).catch(async (serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: classroomDocRef.path,
-            operation: 'write',
-            requestResourceData: newScheduleData,
-          } satisfies SecurityRuleContext);
-          errorEmitter.emit('permission-error', permissionError);
-        });
+        const scheduleHistoryCollection = collection(firestore, 'classrooms', classroomId, 'schedules');
+        const newScheduleDocRef = await addDoc(scheduleHistoryCollection, newScheduleData);
+
+        const classroomDoc = doc(firestore, 'classrooms', classroomId);
+        await setDoc(classroomDoc, { activeScheduleId: newScheduleDocRef.id }, { merge: true });
 
         // Optimistically update UI
         setEditableSchedule(JSON.parse(JSON.stringify(analysisResult.schedule)));
         setState("displaying");
         toast({
           title: "Schedule Updated",
-          description: `The new schedule was uploaded by ${userProfile.name}.`,
+          description: `A new schedule version was uploaded by ${userProfile.name}.`,
         });
       } else {
          throw new Error(analysisResult.errors || "The AI failed to return a valid response.");
@@ -293,17 +305,19 @@ export function ScheduleAnalyzer() {
   };
 
   const onSaveEdits = async () => {
-    if (!classroomDocRef || !userProfile?.name) return;
+    if (!firestore || !classroomId || !userProfile?.name || !activeSchedule?.id) return;
     
     const updatedScheduleData = {
       schedule: editableSchedule,
-      lastUpdatedBy: userProfile.name,
-      updatedAt: serverTimestamp(),
+      uploadedBy: userProfile.name,
+      uploadedAt: serverTimestamp(),
     };
 
-    setDoc(classroomDocRef, updatedScheduleData, { merge: true }).catch(async (serverError) => {
+    const scheduleDocRef = doc(firestore, 'classrooms', classroomId, 'schedules', activeSchedule.id);
+    
+    updateDoc(scheduleDocRef, updatedScheduleData).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
-          path: classroomDocRef.path,
+          path: scheduleDocRef.path,
           operation: 'update',
           requestResourceData: updatedScheduleData,
         } satisfies SecurityRuleContext);
@@ -313,7 +327,7 @@ export function ScheduleAnalyzer() {
     setIsEditing(false);
     toast({
       title: "Schedule Saved",
-      description: "Your changes have been saved for the class.",
+      description: "Your changes have been saved for this schedule version.",
     });
   };
 
@@ -340,7 +354,20 @@ export function ScheduleAnalyzer() {
     setPreviewUrl(null);
     setEditableSchedule([]);
     setIsEditing(false);
+    setShowHistory(false);
   };
+  
+  const handleRestoreVersion = async (scheduleId: string) => {
+      if (!firestore || !classroomId) return;
+
+      const classroomDoc = doc(firestore, 'classrooms', classroomId);
+      await updateDoc(classroomDoc, { activeScheduleId: scheduleId });
+      toast({
+          title: "Schedule Restored",
+          description: "An older version of the schedule is now active."
+      })
+      setShowHistory(false);
+  }
 
   if (state === 'initializing' || isLoading) {
     return <LoadingState isAnalyzing={false} />;
@@ -364,31 +391,45 @@ export function ScheduleAnalyzer() {
         onReset={onReset}
         onSubmit={onSubmit}
         schoolName={getSchoolName()}
-        hasExistingSchedule={!!classroomSchedule}
+        hasExistingSchedule={!!activeSchedule}
       />
     );
   }
 
 
   if (state === "displaying") {
-    const currentSchedule = editableSchedule.length > 0 ? editableSchedule : classroomSchedule?.schedule || [];
+    const currentSchedule = editableSchedule.length > 0 ? editableSchedule : activeSchedule?.schedule || [];
     return (
-      <ResultState
-        user={userProfile}
-        classroomId={classroomId}
-        classroomSchedule={classroomSchedule}
-        editableSchedule={currentSchedule}
-        classmates={classmates}
-        explanations={explanations}
-        onCopy={onCopy}
-        isCopied={isCopied}
-        isEditing={isEditing}
-        setIsEditing={setIsEditing}
-        onScheduleChange={handleScheduleChange}
-        onSaveEdits={onSaveEdits}
-        schoolName={getSchoolName()}
-        onNewUpload={handleNewUpload}
-      />
+      <div className="flex gap-8 items-start">
+        <div className="flex-1 space-y-8">
+            <ResultState
+                user={userProfile}
+                classroomId={classroomId}
+                activeSchedule={activeSchedule}
+                editableSchedule={currentSchedule}
+                classmates={classmates}
+                explanations={explanations}
+                onCopy={onCopy}
+                isCopied={isCopied}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                onScheduleChange={handleScheduleChange}
+                onSaveEdits={onSaveEdits}
+                schoolName={getSchoolName()}
+                onNewUpload={handleNewUpload}
+                onToggleHistory={() => setShowHistory(p => !p)}
+                isHistoryVisible={showHistory}
+            />
+        </div>
+        {showHistory && scheduleHistory && classroomId && (
+          <ScheduleHistory 
+            history={scheduleHistory}
+            activeScheduleId={classroom?.activeScheduleId}
+            onRestore={handleRestoreVersion}
+            classroomId={classroomId}
+          />
+        )}
+      </div>
     );
   }
 
@@ -451,10 +492,10 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   );
 }
 
-function ResultState({ user, classroomId, classroomSchedule, editableSchedule, classmates, explanations, onCopy, isCopied, isEditing, setIsEditing, onScheduleChange, onSaveEdits, schoolName, onNewUpload }: {
+function ResultState({ user, classroomId, activeSchedule, editableSchedule, classmates, explanations, onCopy, isCopied, isEditing, setIsEditing, onScheduleChange, onSaveEdits, schoolName, onNewUpload, onToggleHistory, isHistoryVisible }: {
   user: UserProfile | null;
   classroomId: string | null;
-  classroomSchedule: ClassroomSchedule | null | undefined;
+  activeSchedule: ClassroomSchedule | null | undefined;
   editableSchedule: AnalyzeScheduleFromImageOutput['schedule'];
   classmates: UserProfile[] | null;
   explanations: Explanation[] | null;
@@ -466,9 +507,11 @@ function ResultState({ user, classroomId, classroomSchedule, editableSchedule, c
   onSaveEdits: () => void;
   schoolName: string;
   onNewUpload: () => void;
+  onToggleHistory: () => void;
+  isHistoryVisible: boolean;
 }) {
-  const lastUpdated = classroomSchedule?.updatedAt
-    ? classroomSchedule.updatedAt.toDate().toLocaleString()
+  const lastUpdated = activeSchedule?.uploadedAt
+    ? activeSchedule.uploadedAt.toDate().toLocaleString()
     : null;
 
   return (
@@ -479,11 +522,11 @@ function ResultState({ user, classroomId, classroomSchedule, editableSchedule, c
           <div>
             <CardTitle>Schedule for {schoolName}</CardTitle>
             <CardDescription>
-              {isEditing ? 'Click on a cell to edit the subject.' : `Last updated by ${classroomSchedule?.lastUpdatedBy || 'N/A'}${lastUpdated ? ` on ${lastUpdated}`: ''}`}
+              {isEditing ? 'Click on a cell to edit the subject.' : `Last updated by ${activeSchedule?.uploadedBy || 'N/A'}${lastUpdated ? ` on ${lastUpdated}`: ''}`}
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-             <Button onClick={onNewUpload} variant="outline">
+            <Button onClick={onNewUpload} variant="outline">
               Upload New Schedule
             </Button>
             <Button onClick={isEditing ? onSaveEdits : () => setIsEditing(true)} variant="outline" className="w-28">
@@ -497,6 +540,9 @@ function ResultState({ user, classroomId, classroomSchedule, editableSchedule, c
                 <Copy />
               )}
               {isCopied ? "Copied!" : "Copy Text"}
+            </Button>
+            <Button onClick={onToggleHistory} variant={isHistoryVisible ? "default" : "outline"} size="icon" title="Toggle History">
+                <History />
             </Button>
           </div>
         </div>
@@ -560,7 +606,7 @@ function UploadCard({
   return (
     <Card
       className={cn(
-        "border-2 border-dashed transition-colors",
+        "border-2 border-dashed transition-colors w-full",
         isDragging && "border-primary bg-primary/10"
       )}
       onDragOver={onDragOver}

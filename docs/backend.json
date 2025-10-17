@@ -53,9 +53,20 @@
       },
       "required": ["name", "email", "role", "school"]
     },
+    "Classroom": {
+        "title": "Classroom",
+        "description": "Represents a single classroom and points to its active schedule.",
+        "type": "object",
+        "properties": {
+            "activeScheduleId": {
+                "type": "string",
+                "description": "The ID of the currently active schedule document in the 'schedules' subcollection."
+            }
+        }
+    },
     "ClassroomSchedule": {
       "title": "Classroom Schedule",
-      "description": "Represents the shared schedule for a specific classroom.",
+      "description": "Represents a version of the schedule for a specific classroom.",
       "type": "object",
       "properties": {
         "schedule": {
@@ -73,17 +84,17 @@
             }
           }
         },
-        "lastUpdatedBy": {
+        "uploadedBy": {
           "type": "string",
-          "description": "Name of the user who last updated the schedule."
+          "description": "Name of the user who uploaded this schedule version."
         },
-        "updatedAt": {
+        "uploadedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "The timestamp of the last update."
+          "description": "The timestamp of when this version was uploaded."
         }
       },
-      "required": ["schedule"]
+      "required": ["schedule", "uploadedBy", "uploadedAt"]
     },
     "Explanation": {
       "title": "Explanation Commitment",
@@ -148,8 +159,12 @@
       "description": "Stores public profile information for each user."
     },
     "/classrooms/{classroomId}": {
+      "schema": { "$ref": "#/entities/Classroom" },
+      "description": "Stores classroom metadata, including the active schedule ID. The classroomId is a combination of school, grade and class, e.g., 'stem-kafr-elsheikh-11-c'."
+    },
+    "/classrooms/{classroomId}/schedules/{scheduleId}": {
       "schema": { "$ref": "#/entities/ClassroomSchedule" },
-      "description": "Stores the shared schedule for a classroom. The classroomId is a combination of school, grade and class, e.g., 'stem-kafr-elsheikh-11-c'."
+      "description": "Stores all versions of schedules for a given classroom."
     },
     "/classrooms/{classroomId}/explanations/{explanationId}": {
       "schema": { "$ref": "#/entities/Explanation" },

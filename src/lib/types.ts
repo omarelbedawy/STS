@@ -18,6 +18,13 @@ export interface UserProfile {
   };
 }
 
+export interface ClassroomSchedule {
+    id: string;
+    schedule: any[];
+    uploadedBy: string;
+    uploadedAt: any; // Firestore Timestamp
+}
+
 export interface ExplanationContributor {
   userId: string;
   userName: string;

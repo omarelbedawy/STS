@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { UserProfile, Explanation } from "@/lib/types";
+import type { UserProfile, Explanation, ClassroomSchedule } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -22,10 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type TeacherClass = NonNullable<UserProfile['teacherProfile']>['classes'][number];
 
-interface ClassroomSchedule {
-  schedule: any[];
-  lastUpdatedBy?: string;
-  updatedAt?: any;
+interface Classroom {
+    activeScheduleId?: string;
 }
 
 
@@ -48,7 +46,13 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
     if (!firestore || !classroomId) return null;
     return doc(firestore, 'classrooms', classroomId);
   }, [firestore, classroomId]);
-  const { data: classroomSchedule, loading: classroomLoading } = useDoc<ClassroomSchedule>(classroomDocRef);
+  const { data: classroom, loading: classroomLoading } = useDoc<Classroom>(classroomDocRef);
+
+  const activeScheduleDocRef = useMemo(() => {
+    if (!firestore || !classroomId || !classroom?.activeScheduleId) return null;
+    return doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId);
+  }, [firestore, classroomId, classroom?.activeScheduleId]);
+  const { data: activeSchedule, loading: activeScheduleLoading } = useDoc<ClassroomSchedule>(activeScheduleDocRef);
 
   const classmatesQuery = useMemo(() => {
     if (!firestore || !selectedClass || !teacher.school) return null;
@@ -70,15 +74,15 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
   }, [firestore, classroomId, selectedClass]);
   const { data: explanations, loading: explanationsLoading } = useCollection<Explanation>(explanationsQuery);
 
-  const isLoading = classroomLoading || classmatesLoading || explanationsLoading;
+  const isLoading = classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading;
 
   const schoolName = schoolList.find(s => s.id === teacher.school)?.name || teacher.school;
 
   const filteredSchedule = useMemo(() => {
-    if (!classroomSchedule?.schedule || !selectedClass?.subject) return [];
+    if (!activeSchedule?.schedule || !selectedClass?.subject) return [];
     
     // Create a deep copy to avoid mutating the original data
-    const newSchedule = JSON.parse(JSON.stringify(classroomSchedule.schedule));
+    const newSchedule = JSON.parse(JSON.stringify(activeSchedule.schedule));
 
     return newSchedule.map(row => {
         Object.keys(row).forEach(key => {
@@ -93,7 +97,7 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
         });
         return row;
     });
-  }, [classroomSchedule, selectedClass]);
+  }, [activeSchedule, selectedClass]);
 
   const renderContent = () => {
     if (isLoading) {

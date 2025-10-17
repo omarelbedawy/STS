@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import type { UserProfile, Explanation } from "@/lib/types";
+import type { UserProfile, Explanation, ClassroomSchedule } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -49,10 +49,8 @@ import { Badge } from "@/components/ui/badge";
 import { deleteUserAction } from "@/app/actions";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface ClassroomSchedule {
-  schedule: any[];
-  lastUpdatedBy?: string;
-  updatedAt?: any;
+interface Classroom {
+    activeScheduleId?: string;
 }
 
 
@@ -220,7 +218,14 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
     if (!firestore || !classroomId) return null;
     return doc(firestore, 'classrooms', classroomId);
   }, [firestore, classroomId]);
-  const { data: classroomSchedule, loading: classroomLoading } = useDoc<ClassroomSchedule>(classroomDocRef);
+  const { data: classroom, loading: classroomLoading } = useDoc<Classroom>(classroomDocRef);
+
+  const activeScheduleDocRef = useMemo(() => {
+    if (!firestore || !classroomId || !classroom?.activeScheduleId) return null;
+    return doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId);
+  }, [firestore, classroomId, classroom?.activeScheduleId]);
+  const { data: activeSchedule, loading: activeScheduleLoading } = useDoc<ClassroomSchedule>(activeScheduleDocRef);
+
 
   const classmatesQuery = useMemo(() => {
     if (!firestore || !selectedSchool || !selectedGrade || !selectedClass) return null;
@@ -239,14 +244,21 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
   }, [firestore, classroomId]);
   const { data: explanations, loading: explanationsLoading } = useCollection<Explanation>(explanationsQuery);
 
-  const isLoading = classroomLoading || classmatesLoading || explanationsLoading;
+  const isLoading = classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading;
   const schoolName = schoolList.find(s => s.id === selectedSchool)?.name || selectedSchool;
   
   const handleDeleteSchedule = async () => {
-    if (!firestore || !classroomId) return;
+    if (!firestore || !classroomId || !classroom?.activeScheduleId) return;
     try {
+      // This might need more complex logic depending on how you want to handle history.
+      // For now, let's assume we delete the specific schedule document. A safer approach
+      // might be to just deactivate it.
+      await deleteDoc(doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId));
+
+      // Then, we need to clear the activeScheduleId from the classroom document.
       await deleteDoc(doc(firestore, 'classrooms', classroomId));
-      toast({ title: "Schedule Deleted", description: "The schedule for this class has been removed."});
+
+      toast({ title: "Schedule Deleted", description: "The active schedule for this class has been removed."});
     } catch (error) {
       console.error("Error deleting schedule: ", error);
       toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete schedule."});
@@ -314,10 +326,10 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                         <CardTitle>Schedule for Class {selectedGrade}{selectedClass.toUpperCase()} at {schoolName}</CardTitle>
                         <CardDescription>Viewing as an administrator.</CardDescription>
                       </div>
-                      {classroomSchedule?.schedule && (
+                      {activeSchedule?.schedule && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm"><Trash2 className="mr-2"/>Delete Schedule</Button>
+                              <Button variant="destructive" size="sm"><Trash2 className="mr-2"/>Delete Active Schedule</Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                               <AlertDialogHeader><AlertDialogTitle>Delete Schedule?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the schedule for this classroom.</AlertDialogDescription></AlertDialogHeader>
@@ -328,9 +340,9 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                   </div>
                 </CardHeader>
                 <CardContent>
-                    {(classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) ? (
+                    {(activeSchedule?.schedule && activeSchedule.schedule.length > 0) ? (
                         <ScheduleTable
-                            scheduleData={classroomSchedule.schedule}
+                            scheduleData={activeSchedule.schedule}
                             isEditing={false} // Admins probably shouldn't edit schedules directly
                             user={admin}
                             classroomId={classroomId}
