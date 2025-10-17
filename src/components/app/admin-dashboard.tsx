@@ -61,8 +61,8 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
   const { toast } = useToast();
   const usersQuery = useMemo(() => {
     if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
+    return query(collection(firestore, 'users'), where('uid', '!=', adminUser.uid));
+  }, [firestore, adminUser.uid]);
 
   const { data: initialUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -78,36 +78,30 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
   const handleDeleteUser = async (userId: string) => {
     if (!firestore) return;
     
-    // Optimistic UI update
     const originalUsers = users;
     setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
     
-    toast({ title: "Deleting User Data...", description: "Removing user profile from the database."});
+    toast({ title: "Deleting User Data...", description: "Removing user profile and authentication entry."});
 
-    try {
-      const result = await deleteUserAction({ userId });
+    const result = await deleteUserAction({ userId });
 
-      if (result.success) {
-        toast({ title: "User Data Deleted", description: "The user's profile has been removed. You may need to manually delete them from Firebase Authentication."});
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error: any) {
-        // If anything fails, revert the UI and show an error
-        setUsers(originalUsers);
-        console.error("Error deleting user: ", error);
-        toast({ variant: "destructive", title: "Deletion Failed", description: error.message || "Could not delete user's data."});
+    if (result.success) {
+      toast({ title: "User Deleted", description: "The user has been successfully removed from the system."});
+    } else {
+      setUsers(originalUsers);
+      console.error("Error deleting user: ", result.message);
+      toast({ variant: "destructive", title: "Deletion Failed", description: result.message || "Could not delete user."});
     }
   }
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    return users.filter(u => u.uid !== adminUser.uid && (
+    return users.filter(u => (
         u.name.toLowerCase().includes(filter.toLowerCase()) ||
         u.email.toLowerCase().includes(filter.toLowerCase()) ||
         u.role.toLowerCase().includes(filter.toLowerCase())
     ));
-  }, [users, filter, adminUser.uid]);
+  }, [users, filter]);
 
   const renderUserContent = () => {
     if (usersLoading) {
@@ -181,8 +175,8 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
                                         <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="size-4"/></Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
-                                        <AlertDialogHeader><AlertDialogTitle>Delete {user.name}'s Data?</AlertDialogTitle><AlertDialogDescription>This action is irreversible and will permanently delete the user's profile data from the database. It will not delete their authentication account.</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteUser(user.uid)} className="bg-destructive hover:bg-destructive/90">Delete User Data</AlertDialogAction></AlertDialogFooter>
+                                        <AlertDialogHeader><AlertDialogTitle>Delete {user.name}?</AlertDialogTitle><AlertDialogDescription>This action is irreversible and will permanently delete the user's profile and their authentication account.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteUser(user.uid)} className="bg-destructive hover:bg-destructive/90">Delete User</AlertDialogAction></AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </TableCell>
@@ -406,3 +400,5 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
     </div>
   );
 }
+
+    

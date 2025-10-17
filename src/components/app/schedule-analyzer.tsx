@@ -120,14 +120,17 @@ export function ScheduleAnalyzer() {
       setState("initializing");
       return;
     }
-
-    if (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) {
-      setEditableSchedule(JSON.parse(JSON.stringify(classroomSchedule.schedule)));
-      setState("displaying");
-    } else {
-      setState("idle");
+    
+    // This effect should not interfere if the user is in the process of uploading.
+    if (state === 'idle' || state === 'displaying' || state === 'initializing') {
+        if (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) {
+            setEditableSchedule(JSON.parse(JSON.stringify(classroomSchedule.schedule)));
+            setState("displaying");
+        } else {
+            setState("idle");
+        }
     }
-  }, [isLoading, classroomSchedule, user?.uid]);
+  }, [isLoading, classroomSchedule, user?.uid, state]);
   
   // Effect to automatically update explanation status
   useEffect(() => {
@@ -333,9 +336,13 @@ export function ScheduleAnalyzer() {
 
   const handleNewUpload = () => {
     setState("idle");
+    setFile(null);
+    setPreviewUrl(null);
+    setEditableSchedule([]);
+    setIsEditing(false);
   };
 
-  if (isLoading) {
+  if (state === 'initializing' || isLoading) {
     return <LoadingState isAnalyzing={false} />;
   }
 
@@ -343,26 +350,8 @@ export function ScheduleAnalyzer() {
     return <LoadingState isAnalyzing={true} />;
   }
   
-  if (state === "idle" && (!classroomSchedule?.schedule || classroomSchedule.schedule.length === 0)) {
+  if (state === "idle" || state === "previewing") {
     return (
-      <UploadCard
-        isDragging={isDragging}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        fileInputRef={fileInputRef}
-        onFileChange={onFileChange}
-        state={state}
-        previewUrl={previewUrl}
-        onReset={onReset}
-        onSubmit={onSubmit}
-        schoolName={getSchoolName()}
-      />
-    );
-  }
-
-  if (state === "previewing") {
-     return (
       <UploadCard
         isDragging={isDragging}
         onDragOver={onDragOver}
@@ -561,6 +550,7 @@ function UploadCard({
   onSubmit: () => void;
   schoolName: string;
 }) {
+  const hasExistingSchedule = state !== 'idle';
   return (
     <Card
       className={cn(
@@ -572,8 +562,8 @@ function UploadCard({
       onDrop={onDrop}
     >
       <CardHeader>
-        <CardTitle>No Schedule Found</CardTitle>
-        <CardDescription>The schedule for {schoolName} has not been uploaded yet. Be the first!</CardDescription>
+        <CardTitle>{hasExistingSchedule ? "Upload a New Schedule" : "No Schedule Found"}</CardTitle>
+        <CardDescription>{hasExistingSchedule ? `Upload a new image to replace the current schedule for ${schoolName}.` : `The schedule for ${schoolName} has not been uploaded yet. Be the first!`}</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <input
@@ -630,7 +620,5 @@ function UploadCard({
     </Card>
   );
 }
-
-    
 
     

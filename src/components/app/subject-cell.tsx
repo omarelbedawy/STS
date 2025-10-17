@@ -50,6 +50,13 @@ import {
 } from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 
 
 const subjectList = [
@@ -419,13 +426,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
   )
 }
 
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
+
 
 
 export function SubjectCell({ subject, isEditing, onChange, user, classroomId, day, session, explanations, classmates }: {
@@ -578,3 +579,5 @@ export function SubjectCell({ subject, isEditing, onChange, user, classroomId, d
 
   return <div>{cellStructure}</div>;
 }
+
+    
