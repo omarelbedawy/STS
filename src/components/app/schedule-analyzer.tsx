@@ -36,6 +36,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { schoolList } from "@/lib/schools";
 import { ClassmatesDashboard } from "./classmates-dashboard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type AnalysisState = "idle" | "previewing" | "loading" | "displaying" | "initializing";
 type ScheduleRow = AnalyzeScheduleFromImageOutput["schedule"][number];
@@ -122,7 +123,7 @@ export function ScheduleAnalyzer() {
     }
     
     // This effect should not interfere if the user is in the process of uploading.
-    if (state === 'idle' || state === 'displaying' || state === 'initializing') {
+    if (state === 'initializing' || state === 'displaying') {
         if (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) {
             setEditableSchedule(JSON.parse(JSON.stringify(classroomSchedule.schedule)));
             setState("displaying");
@@ -216,7 +217,6 @@ export function ScheduleAnalyzer() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
     setPreviewUrl(null);
-    setEditableSchedule([]);
     // After reset, if a schedule exists, go to 'displaying', else 'idle'.
     if (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) {
       setEditableSchedule(JSON.parse(JSON.stringify(classroomSchedule.schedule)));
@@ -364,6 +364,7 @@ export function ScheduleAnalyzer() {
         onReset={onReset}
         onSubmit={onSubmit}
         schoolName={getSchoolName()}
+        hasExistingSchedule={!!classroomSchedule}
       />
     );
   }
@@ -401,7 +402,11 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   );
 
   useEffect(() => {
-    if (!isAnalyzing) return;
+    if (!isAnalyzing) {
+      setMessage("Loading workspace...");
+      setProgress(0); // Show a generic loader, maybe?
+      return;
+    };
 
     const messages = [
       "Extracting text from image...",
@@ -537,6 +542,7 @@ function UploadCard({
   onReset,
   onSubmit,
   schoolName,
+  hasExistingSchedule,
 }: {
   isDragging: boolean;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
@@ -549,8 +555,8 @@ function UploadCard({
   onReset: () => void;
   onSubmit: () => void;
   schoolName: string;
+  hasExistingSchedule: boolean;
 }) {
-  const hasExistingSchedule = state !== 'idle';
   return (
     <Card
       className={cn(
@@ -620,5 +626,3 @@ function UploadCard({
     </Card>
   );
 }
-
-    
