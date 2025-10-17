@@ -124,7 +124,19 @@ const analyzeScheduleFromImageFlow = ai.defineFlow(
     outputSchema: AnalyzeScheduleFromImageOutputSchema,
   },
   async input => {
-    const {output} = await analyzeScheduleFromImagePrompt(input);
-    return output!;
+    try {
+      const {output} = await analyzeScheduleFromImagePrompt(input);
+      if (!output) {
+        throw new Error('The AI model returned an empty response.');
+      }
+      return output;
+    } catch (e: any) {
+      console.error('Genkit flow error in analyzeScheduleFromImageFlow:', e);
+      // Construct an error object that matches the expected output schema
+      return {
+        schedule: [],
+        errors: e.message || 'The AI model failed to respond. Please check your API key, billing status, and server logs.',
+      };
+    }
   }
 );
