@@ -1,3 +1,4 @@
+
 'use server';
 
 import { analyzeScheduleFromImage, AnalyzeScheduleFromImageInput, AnalyzeScheduleFromImageOutput } from '@/ai/flows/analyze-schedule-from-image';
@@ -16,12 +17,12 @@ export async function analyzeScheduleAction(
   try {
     const result = await analyzeScheduleFromImage(input);
     return result;
-  } catch (e) {
+  } catch (e: any) {
     console.error('Error analyzing schedule:', e);
     // Return a structured error that the client can display
     return {
       schedule: [],
-      errors: 'An unexpected error occurred while analyzing the schedule. The AI model might be unavailable or the image format could be unsupported. Please try again later.'
+      errors: e.message || 'An unexpected error occurred while analyzing the schedule. The AI model might be unavailable or the image format could be unsupported. Please try again later.'
     };
   }
 }
