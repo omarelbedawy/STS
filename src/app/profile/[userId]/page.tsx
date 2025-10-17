@@ -45,10 +45,10 @@ export default function ProfilePage() {
     const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userProfileRef);
 
     const explanationsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !userProfile?.school || !userProfile?.grade || !userProfile?.class || !userProfile?.name) return null;
         return query(
-            collection(firestore, 'classrooms', `${userProfile?.school}-${userProfile?.grade}-${userProfile?.class}`, 'explanations'),
-            where('contributors', 'array-contains', { userId: userId, status: 'accepted', userName: userProfile?.name }),
+            collection(firestore, 'classrooms', `${userProfile.school}-${userProfile.grade}-${userProfile.class}`, 'explanations'),
+            where('contributors', 'array-contains', { userId: userId, status: 'accepted', userName: userProfile.name }),
             where('completionStatus', '==', 'explained')
         );
     }, [firestore, userId, userProfile]);
