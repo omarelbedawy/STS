@@ -46,7 +46,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { schoolList } from "@/lib/schools";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { deleteUserAction } from "@/app/actions";
+import { deleteUserAction } from "@/app/admin/actions";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Classroom {
