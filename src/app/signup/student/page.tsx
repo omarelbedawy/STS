@@ -38,10 +38,15 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string(),
   school: z.string().min(1, "Please select your school."),
   grade: z.enum(["10", "11", "12"]),
   class: z.enum(["a", "b", "c", "d", "e", "f"]),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
+
 
 export default function StudentSignUpPage() {
   const router = useRouter();
@@ -55,6 +60,7 @@ export default function StudentSignUpPage() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       school: "",
       grade: "11",
       class: "c",
@@ -147,19 +153,34 @@ export default function StudentSignUpPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
                <FormField
                 control={form.control}
                 name="school"

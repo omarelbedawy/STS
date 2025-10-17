@@ -33,9 +33,13 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string(),
   adminSecret: z.string().refine(val => val === ADMIN_SECRET, {
     message: "Incorrect admin secret. Access denied.",
   }),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
 });
 
 export default function AdminSignUpPage() {
@@ -50,6 +54,7 @@ export default function AdminSignUpPage() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       adminSecret: "",
     },
   });
@@ -141,6 +146,19 @@ export default function AdminSignUpPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>

@@ -45,8 +45,12 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string(),
   school: z.string().min(1, "Please select your school."),
   classes: z.array(classSubjectSchema).min(1, "You must add at least one class."),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
 });
 
 const subjects = ["Arabic", "EN", "Bio", "CH", "PH", "MATH", "MEC", "CITZ", "ACTV", "ADV", "CAP", "REL", "F", "G", "PE", "CS", "Geo", "SOCIAL"];
@@ -63,6 +67,7 @@ export default function TeacherSignUpPage() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       school: "",
       classes: [{ grade: "11", class: "a", subject: "MATH" }],
     },
@@ -129,15 +134,20 @@ export default function TeacherSignUpPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="name" control={form.control} render={({ field }) => (
-                  <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Jane Doe" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField name="email" control={form.control} render={({ field }) => (
                   <FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="you@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <FormField name="password" control={form.control} render={({ field }) => (
                   <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
+                <FormField name="confirmPassword" control={form.control} render={({ field }) => (
+                    <FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
               <FormField name="school" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>School</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select your school" /></SelectTrigger></FormControl><SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
