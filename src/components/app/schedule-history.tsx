@@ -30,13 +30,11 @@ export function ScheduleHistory({
     activeScheduleId,
     onSetActive,
     onDelete,
-    classroomId,
 }: {
     history: ClassroomSchedule[];
     activeScheduleId?: string;
     onSetActive: (scheduleId: string) => void;
     onDelete: (scheduleId: string) => void;
-    classroomId: string;
 }) {
 
     const sortedHistory = [...history].sort((a, b) => {
@@ -48,22 +46,20 @@ export function ScheduleHistory({
     return (
       <Collapsible defaultOpen={false}>
         <Card className="w-full">
-            <CollapsibleTrigger className="w-full">
-                <CardHeader>
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <History className="size-6 text-primary" />
-                            <div>
-                                <CardTitle>Schedule History</CardTitle>
-                                <CardDescription>Previous versions of the schedule.</CardDescription>
-                            </div>
+            <CollapsibleTrigger asChild>
+                <div className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-t-lg p-6 hover:bg-muted">
+                    <div className="flex items-center gap-3">
+                        <History className="size-6 text-primary" />
+                        <div>
+                            <CardTitle>Schedule History</CardTitle>
+                            <CardDescription>Previous versions of the schedule.</CardDescription>
                         </div>
-                        <Button variant="ghost" size="icon" className="data-[state=open]:rotate-180 transition-transform">
-                            <ChevronsUpDown className="size-5" />
-                            <span className="sr-only">Toggle History</span>
-                        </Button>
                     </div>
-                </CardHeader>
+                    <Button variant="ghost" size="icon" className="data-[state=open]:rotate-180 transition-transform">
+                        <ChevronsUpDown className="size-5" />
+                        <span className="sr-only">Toggle History</span>
+                    </Button>
+                </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
                 <CardContent>
@@ -151,5 +147,3 @@ export function ScheduleHistory({
       </Collapsible>
     );
 }
-
-    
