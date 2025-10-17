@@ -149,7 +149,7 @@ export function ScheduleAnalyzer() {
             setState("idle");
         }
     }
-  }, [isLoading, activeSchedule, user?.uid, state]);
+  }, [isLoading, activeSchedule, state]);
   
   // Effect to automatically update explanation status
   useEffect(() => {
@@ -788,3 +788,5 @@ function UploadCard({
     </Card>
   );
 }
+
+    
