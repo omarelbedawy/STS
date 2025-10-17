@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +34,7 @@ import { useState } from "react";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { schoolList } from "@/lib/schools";
+import { firebaseConfig } from "@/firebase/config";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -78,7 +80,12 @@ export default function StudentSignUpPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
-      await sendEmailVerification(user);
+      
+      const actionCodeSettings = {
+        url: `${window.location.origin}/dashboard`,
+        handleCodeInApp: true,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
 
       const userProfile = {
         name: values.name,
@@ -102,10 +109,10 @@ export default function StudentSignUpPage() {
       
       toast({
         title: "Account Created",
-        description: "Welcome! A verification email has been sent to your inbox.",
+        description: "Please check your inbox to verify your email address.",
       });
 
-      router.push("/dashboard");
+      router.push("/verify-email");
 
     } catch (error: any) {
       toast({

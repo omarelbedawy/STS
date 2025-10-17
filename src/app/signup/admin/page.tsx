@@ -26,6 +26,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { firebaseConfig } from "@/firebase/config";
 
 const ADMIN_SECRET = "Iamtheonlyadminonearth"; // Use a more secure secret from environment variables in a real app
 
@@ -68,7 +69,12 @@ export default function AdminSignUpPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
-      await sendEmailVerification(user);
+      
+      const actionCodeSettings = {
+        url: `${window.location.origin}/dashboard`,
+        handleCodeInApp: true,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
 
 
       const userProfile = {
@@ -90,10 +96,10 @@ export default function AdminSignUpPage() {
       
       toast({
         title: "Admin Account Created",
-        description: "Welcome, administrator. A verification email has been sent to your inbox.",
+        description: "Please check your inbox to verify your email address.",
       });
 
-      router.push("/dashboard");
+      router.push("/verify-email");
 
     } catch (error: any) {
       toast({

@@ -40,12 +40,18 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
     }
   }, [user, userLoading, router]);
+
+  useEffect(() => {
+    if (user && !user.emailVerified) {
+      router.push('/verify-email');
+    }
+  }, [user, router]);
+
 
   const userProfileQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -53,9 +59,9 @@ export default function DashboardPage() {
   }, [firestore, user?.uid]);
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
-  const isReady = !userLoading && !!user && !userProfileLoading && !!userProfile && !!firestore;
+  const isReady = !userLoading && !!user?.emailVerified && !userProfileLoading && !!userProfile && !!firestore;
 
-  if (!isReady) {
+  if (!user || !user.emailVerified || !isReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

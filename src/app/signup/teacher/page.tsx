@@ -34,6 +34,7 @@ import { useState } from "react";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { schoolList } from "@/lib/schools";
+import { firebaseConfig } from "@/firebase/config";
 
 const classSubjectSchema = z.object({
   grade: z.enum(["10", "11", "12"]),
@@ -87,7 +88,12 @@ export default function TeacherSignUpPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
-      await sendEmailVerification(user);
+      
+      const actionCodeSettings = {
+        url: `${window.location.origin}/dashboard`,
+        handleCodeInApp: true,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
 
       const userProfile = {
         name: values.name,
@@ -111,10 +117,10 @@ export default function TeacherSignUpPage() {
       
       toast({
         title: "Account Created",
-        description: "You've been signed up as a teacher. A verification email has been sent.",
+        description: "Please check your inbox to verify your email address.",
       });
 
-      router.push("/dashboard");
+      router.push("/verify-email");
 
     } catch (error: any) {
       toast({ variant: "destructive", title: "Sign Up Failed", description: error.message || "An unexpected error occurred." });
