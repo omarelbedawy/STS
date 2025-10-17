@@ -18,6 +18,7 @@ import { ClassmatesDashboard } from "./classmates-dashboard";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { schoolList } from "@/lib/schools";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type TeacherClass = NonNullable<UserProfile['teacherProfile']>['classes'][number];
 
@@ -94,6 +95,79 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
     });
   }, [classroomSchedule, selectedClass]);
 
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    <Skeleton className="h-40 w-full" />
+                </div>
+            </CardContent>
+          </Card>
+          <Card>
+             <CardHeader>
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
+    if (selectedClass) {
+        return (
+            <>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Schedule for Class {selectedClass.grade}{selectedClass.class.toUpperCase()} at {schoolName}</CardTitle>
+                    <CardDescription>Showing only your subject: <span className="font-bold">{selectedClass.subject}</span></CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {(filteredSchedule.length > 0) ? (
+                         <ScheduleTable
+                            scheduleData={filteredSchedule}
+                            isEditing={false}
+                            user={teacher}
+                            classroomId={classroomId}
+                            explanations={explanations || []}
+                            classmates={classmates}
+                         />
+                    ) : (
+                        <div className="text-center text-muted-foreground py-10">
+                            The schedule for this class has not been uploaded yet.
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+            <ClassmatesDashboard 
+                classmates={classmates} 
+                explanations={explanations} 
+                currentUser={teacher}
+                classroomId={classroomId}
+            />
+            </>
+        )
+    }
+
+    return (
+        <Card>
+            <CardContent className="py-10 text-center text-muted-foreground">
+                <p>You are not assigned to any classes yet.</p>
+            </CardContent>
+        </Card>
+    );
+  }
+
 
   return (
     <div className="space-y-8">
@@ -109,7 +183,7 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
             {teacher.teacherProfile?.classes.map((c, i) => (
               <Button
                 key={i}
-                variant={selectedClass === c ? "default" : "outline"}
+                variant={selectedClass?.grade === c.grade && selectedClass?.class === c.class && selectedClass?.subject === c.subject ? "default" : "outline"}
                 onClick={() => handleClassSelect(c)}
               >
                 Class {c.grade}{c.class.toUpperCase()} - {c.subject}
@@ -119,49 +193,8 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
         </CardContent>
       </Card>
       
-      {selectedClass ? (
-        <Card>
-            <CardHeader>
-                <CardTitle>Schedule for Class {selectedClass.grade}{selectedClass.class.toUpperCase()} at {schoolName}</CardTitle>
-                <CardDescription>Showing only your subject: <span className="font-bold">{selectedClass.subject}</span></CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <div className="flex justify-center items-center h-48">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                ) : (filteredSchedule.length > 0) ? (
-                     <ScheduleTable
-                        scheduleData={filteredSchedule}
-                        isEditing={false}
-                        user={teacher}
-                        classroomId={classroomId}
-                        explanations={explanations || []}
-                        classmates={classmates}
-                     />
-                ) : (
-                    <div className="text-center text-muted-foreground py-10">
-                        The schedule for this class has not been uploaded yet.
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-      ) : (
-         <Card>
-            <CardContent className="py-10 text-center text-muted-foreground">
-                <p>You are not assigned to any classes yet.</p>
-            </CardContent>
-        </Card>
-      )}
+      {renderContent()}
 
-      {selectedClass && !isLoading && (
-         <ClassmatesDashboard 
-            classmates={classmates} 
-            explanations={explanations} 
-            currentUser={teacher}
-            classroomId={classroomId}
-        />
-      )}
     </div>
   );
 }

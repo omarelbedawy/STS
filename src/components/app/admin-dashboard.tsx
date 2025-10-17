@@ -47,6 +47,7 @@ import { schoolList } from "@/lib/schools";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { deleteUserAction } from "@/app/actions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ClassroomSchedule {
   schedule: any[];
@@ -108,6 +109,92 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
     ));
   }, [users, filter, adminUser.uid]);
 
+  const renderUserContent = () => {
+    if (usersLoading) {
+        return (
+             <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-16" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-12" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-12" /></TableHead>
+                                <TableHead className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-14" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+         <>
+            <Input 
+                placeholder="Filter by name, email, or role..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+            />
+            <div className="border rounded-md">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>School</TableHead>
+                    <TableHead>Grade</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {filteredUsers.map(user => (
+                        <TableRow key={user.uid}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>{user.role}</Badge></TableCell>
+                            <TableCell>{schoolList.find(s => s.id === user.school)?.name || user.school}</TableCell>
+                            <TableCell>{user.grade || 'N/A'}</TableCell>
+                            <TableCell>{user.class?.toUpperCase() || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                               <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="size-4"/></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader><AlertDialogTitle>Delete {user.name}'s Data?</AlertDialogTitle><AlertDialogDescription>This action is irreversible and will permanently delete the user's profile data from the database. It will not delete their authentication account.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteUser(user.uid)} className="bg-destructive hover:bg-destructive/90">Delete User Data</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </div>
+        </>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -115,51 +202,7 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
         <CardDescription>View, edit, and delete users from the system.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Input 
-            placeholder="Filter by name, email, or role..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-        />
-        <div className="border rounded-md">
-            <Table>
-            <TableHeader>
-                <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>School</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {usersLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center"><Loader2 className="inline-block animate-spin" /></TableCell></TableRow>
-                ) : filteredUsers.map(user => (
-                    <TableRow key={user.uid}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>{user.role}</Badge></TableCell>
-                        <TableCell>{schoolList.find(s => s.id === user.school)?.name || user.school}</TableCell>
-                        <TableCell>{user.grade || 'N/A'}</TableCell>
-                        <TableCell>{user.class?.toUpperCase() || 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                           <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="size-4"/></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Delete {user.name}'s Data?</AlertDialogTitle><AlertDialogDescription>This action is irreversible and will permanently delete the user's profile data from the database. It will not delete their authentication account.</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteUser(user.uid)} className="bg-destructive hover:bg-destructive/90">Delete User Data</AlertDialogAction></AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-            </Table>
-        </div>
+        {renderUserContent()}
       </CardContent>
     </Card>
   );
@@ -239,52 +282,37 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
     }
   }
 
-  return (
-    <div className="space-y-8">
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>Admin Dashboard</CardTitle>
-                        <CardDescription>Oversee all schools, classes, and users.</CardDescription>
-                    </div>
-                     <div className="flex gap-2">
-                        <Button variant={view === 'classrooms' ? 'default' : 'outline'} onClick={() => setView('classrooms')}>Classrooms</Button>
-                        <Button variant={view === 'users' ? 'default' : 'outline'} onClick={() => setView('users')}>Users</Button>
-                    </div>
-                </div>
-            </CardHeader>
-        </Card>
+  const renderClassroomContent = () => {
+    if (isLoading) {
+        return (
+            <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-1/2" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <Skeleton className="h-40 w-full" />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-1/3" />
+                        <Skeleton className="h-4 w-1/2" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
-      {view === 'classrooms' && (
-        <>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Classroom Browser</CardTitle>
-                    <CardDescription>Select a school, grade, and class to view its details.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                    <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
-                    <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                    <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="10">Grade 10</SelectItem>
-                        <SelectItem value="11">Grade 11</SelectItem>
-                        <SelectItem value="12">Grade 12</SelectItem>
-                    </SelectContent>
-                    </Select>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                    <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                    <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                </CardContent>
-            </Card>
-
+    return (
+         <>
             <Card>
                 <CardHeader>
                   <div className="flex flex-wrap justify-between items-center gap-4">
@@ -306,9 +334,7 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                   </div>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? (
-                        <div className="flex justify-center items-center h-48"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                    ) : (classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) ? (
+                    {(classroomSchedule?.schedule && classroomSchedule.schedule.length > 0) ? (
                         <ScheduleTable
                             scheduleData={classroomSchedule.schedule}
                             isEditing={false} // Admins probably shouldn't edit schedules directly
@@ -323,7 +349,7 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                 </CardContent>
             </Card>
 
-            {classroomId && !isLoading && (
+            {classroomId && (
                 <ClassmatesDashboard 
                     classmates={classmates} 
                     explanations={explanations} 
@@ -333,10 +359,50 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                 />
             )}
         </>
-      )}
-       {view === 'users' && (
-           <UserManagement adminUser={admin} />
-       )}
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Admin Dashboard</CardTitle>
+                        <CardDescription>Oversee all schools, classes, and users.</CardDescription>
+                    </div>
+                     <div className="flex gap-2">
+                        <Button variant={view === 'classrooms' ? 'default' : 'outline'} onClick={() => setView('classrooms')}>Classrooms</Button>
+                        <Button variant={view === 'users' ? 'default' : 'outline'} onClick={() => setView('users')}>Users</Button>
+                    </div>
+                </div>
+            </CardHeader>
+            {view === 'classrooms' && (
+                 <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+                        <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
+                        <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                        <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="10">Grade 10</SelectItem>
+                            <SelectItem value="11">Grade 11</SelectItem>
+                            <SelectItem value="12">Grade 12</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                        <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            )}
+        </Card>
+
+      {view === 'classrooms' && renderClassroomContent()}
+      {view === 'users' && <UserManagement adminUser={admin} />}
     </div>
   );
 }
