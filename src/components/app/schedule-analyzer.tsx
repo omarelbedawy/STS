@@ -252,7 +252,7 @@ export function ScheduleAnalyzer() {
   };
 
   const onEnterUploadMode = () => {
-    setState('uploading');
+    setState('idle');
     setIsEditing(false);
     setFile(null);
     setPreviewUrl(null);
@@ -430,7 +430,7 @@ export function ScheduleAnalyzer() {
 
 
   if (state === 'loading') {
-    return <LoadingState isAnalyzing={state === 'loading' && !!file} />;
+    return <LoadingState isAnalyzing={!!file} />;
   }
 
   const renderMainContent = () => {
@@ -690,12 +690,12 @@ function UploadCard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <CardTitle>Upload New Schedule</CardTitle>
-              <CardDescription>Upload an image to create a new active schedule for the class.</CardDescription>
+              <CardDescription>Upload an image to create a new active schedule for {schoolName}.</CardDescription>
             </div>
             {hasActiveSchedule && (
                  <Button onClick={onCancelUpload} variant="outline">
                     <ArrowLeft className="mr-2" />
-                    Cancel
+                    Back to Schedule
                 </Button>
             )}
           </div>

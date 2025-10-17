@@ -57,35 +57,41 @@ interface Classroom {
 function UserManagement({ adminUser }: { adminUser: UserProfile }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  // Query all users except the current admin
   const usersQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('uid', '!=', adminUser.uid));
-  }, [firestore, adminUser.uid]);
+    return query(collection(firestore, 'users'));
+  }, [firestore]);
 
-  const { data: initialUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
+
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filter, setFilter] = useState("");
-
+  
   useEffect(() => {
-    if (initialUsers) {
-      setUsers(initialUsers);
-    }
-  }, [initialUsers]);
+      if (allUsers) {
+          // Filter out the current admin user from the list displayed
+          setUsers(allUsers.filter(u => u.uid !== adminUser.uid));
+      }
+  }, [allUsers, adminUser.uid]);
 
 
   const handleDeleteUser = async (userId: string) => {
     if (!firestore) return;
     
     const originalUsers = users;
+    // Optimistically update UI
     setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
     
-    toast({ title: "Deleting User Data...", description: "Removing user profile and authentication entry."});
+    toast({ title: "Deleting User...", description: "Removing user profile and authentication entry."});
 
     const result = await deleteUserAction({ userId });
 
     if (result.success) {
       toast({ title: "User Deleted", description: "The user has been successfully removed from the system."});
     } else {
+      // Revert UI on failure
       setUsers(originalUsers);
       console.error("Error deleting user: ", result.message);
       toast({ variant: "destructive", title: "Deletion Failed", description: result.message || "Could not delete user."});
