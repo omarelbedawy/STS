@@ -48,9 +48,9 @@ export default function DashboardPage() {
   }, [firestore, user?.uid]);
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
-  const isReady = !userLoading && !!user?.emailVerified && !userProfileLoading && !!userProfile && !!firestore;
+  const isReady = !userLoading && !!user?.emailVerified;
 
-  if (!isReady) {
+  if (!isReady || userProfileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -60,14 +60,17 @@ export default function DashboardPage() {
   }
 
   const renderDashboard = () => {
-    switch (userProfile?.role) {
+    // If we have a profile, use its role. Otherwise, check for admin email as a fallback.
+    const role = userProfile?.role;
+
+    switch (role) {
       case 'teacher':
         return <TeacherDashboard teacher={userProfile} />;
       case 'admin':
         return <AdminDashboard admin={userProfile} />;
       case 'student':
       default:
-        // For students, we now directly render the ScheduleAnalyzer
+        // For students or if profile is somehow missing, show the schedule analyzer.
         return <ScheduleAnalyzer />;
     }
   }
@@ -77,7 +80,7 @@ export default function DashboardPage() {
       <Header userProfile={userProfile} />
       <main className="container mx-auto px-4 pb-12 pt-8">
         <Suspense fallback={<DashboardSkeleton />}>
-          {renderDashboard()}
+          {userProfile ? renderDashboard() : <ScheduleAnalyzer />}
         </Suspense>
       </main>
     </div>
