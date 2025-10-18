@@ -19,6 +19,22 @@ export default function VerifyEmailPage() {
   const [isSending, setIsSending] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
+  // Redirect if user is not logged in or is already verified
+  useEffect(() => {
+    if (!userLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (user.emailVerified) {
+        toast({
+            title: 'Email Verified!',
+            description: 'Your account is now active. Welcome to STS!',
+        });
+        router.push('/dashboard');
+      }
+    }
+  }, [user, userLoading, router, toast]);
+
+  // Timer for resend button
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isSending) {
@@ -36,29 +52,20 @@ export default function VerifyEmailPage() {
     return () => clearInterval(interval);
   }, [isSending]);
   
-  useEffect(() => {
-    if (user?.emailVerified) {
-      toast({
-        title: 'Email Verified!',
-        description: 'Your account is now active. Welcome to STS!',
-      });
-      router.push('/dashboard');
-    }
-  }, [user, router, toast]);
-
   // Handle periodic re-checking of user's email verification status
   useEffect(() => {
-    const intervalId = setInterval(async () => {
-      if (auth.currentUser) {
-        await auth.currentUser.reload();
-        if (auth.currentUser.emailVerified) {
-          router.push('/dashboard');
-        }
-      }
-    }, 5000); // Check every 5 seconds
+    if (user && !user.emailVerified) {
+        const intervalId = setInterval(async () => {
+            if (auth.currentUser) {
+                await auth.currentUser.reload();
+                // State will be updated by the onAuthStateChanged listener in useUser hook
+                // which will trigger the redirection effect above.
+            }
+        }, 5000); // Check every 5 seconds
 
-    return () => clearInterval(intervalId);
-  }, [router]);
+        return () => clearInterval(intervalId);
+    }
+  }, [user, router]);
 
 
   const handleResendVerification = async () => {
@@ -89,7 +96,8 @@ export default function VerifyEmailPage() {
     router.push('/login');
   }
 
-  if (userLoading) {
+  // Show a loading screen until user status is determined
+  if (userLoading || !user || user.emailVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -97,16 +105,6 @@ export default function VerifyEmailPage() {
     );
   }
   
-  if (!user) {
-     router.push('/login');
-     return null;
-  }
-  
-  if (user.emailVerified) {
-    router.push('/dashboard');
-    return null;
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-lg text-center">
