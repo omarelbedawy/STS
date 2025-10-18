@@ -20,27 +20,25 @@ export default function VerifyEmailPage() {
 
   // Redirect if user status changes (e.g., they get verified)
   useEffect(() => {
-    const interval = setInterval(async () => {
-        if (user) {
-            await user.reload();
-            if (user.emailVerified) {
-                toast({
-                    title: 'Email Verified!',
-                    description: 'Your account is now active. Welcome to STS!',
-                });
-                router.push('/dashboard');
-            }
-        }
-    }, 3000); // Check every 3 seconds
-
     if (!userLoading && user?.emailVerified) {
         toast({
             title: 'Email Verified!',
             description: 'Your account is now active. Welcome to STS!',
         });
         router.push('/dashboard');
+        return; // Early exit
     }
-    
+
+    const interval = setInterval(async () => {
+        if (user) {
+            await user.reload();
+            if (user.emailVerified) {
+                // The toast and redirect will happen on the next render via the check above
+                // We just need to force a re-render if state changes, which `user.reload()` does indirectly
+            }
+        }
+    }, 3000); // Check every 3 seconds
+
     return () => clearInterval(interval);
   }, [user, userLoading, router, toast]);
 
@@ -66,7 +64,12 @@ export default function VerifyEmailPage() {
     if (!user) return;
     setIsSending(true);
     try {
-      await sendEmailVerification(user);
+      const origin = window.location.origin;
+      const actionCodeSettings = {
+        url: `${origin}/dashboard`,
+        handleCodeInApp: true,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
       toast({
         title: 'Verification Email Sent',
         description: 'A new verification link has been sent to your inbox.',
@@ -131,12 +134,9 @@ export default function VerifyEmailPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Please click the link in that email to continue. If you don't see it, be sure to check your spam folder. Once verified, you will be automatically redirected.
+            Please click the link in that email to continue. If you don't see it, be sure to check your spam folder. This page will automatically redirect you once your email is verified.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={() => router.push('/dashboard')}>
-                Continue to Dashboard
-            </Button>
             <Button onClick={handleResendVerification} disabled={isSending} variant="secondary">
                 {isSending ? (
                 <>

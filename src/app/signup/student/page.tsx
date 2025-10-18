@@ -27,7 +27,7 @@ import { auth } from "@/firebase/auth/client";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { schoolList } from "@/lib/schools";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
@@ -50,6 +50,11 @@ export default function StudentSignUpPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -93,7 +98,12 @@ export default function StudentSignUpPage() {
       await setDoc(userDocRef, userProfileData);
 
       await updateProfile(user, { displayName: values.name });
-      await sendEmailVerification(user);
+      
+      const actionCodeSettings = {
+        url: `${origin}/dashboard`,
+        handleCodeInApp: true,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
 
       toast({
         title: "Account Created",
