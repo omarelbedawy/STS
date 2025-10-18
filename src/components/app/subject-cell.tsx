@@ -35,7 +35,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, writeBatch } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, writeBatch, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import {
   Tooltip,
@@ -197,7 +197,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
     const finalConcepts = [...concepts];
     if (currentConcept.trim() && !finalConcepts.includes(currentConcept.trim())) {
       finalConcepts.push(currentConcept.trim());
-      setConcepts(finalConcepts);
+      setConcepts(finalConcepts); // update state for UI consistency
       setCurrentConcept('');
     }
 
@@ -221,7 +221,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
       return;
     }
 
-    if (!firestore || !classroomId) {
+    if (!firestore || !classroomId || !user.school || !user.grade || !user.class) {
        toast({
         variant: "destructive",
         title: "Connection Error",
@@ -257,6 +257,34 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
       const newExplanationRef = doc(explanationsColRef);
       batch.set(newExplanationRef, explanationData);
       
+      // Find teachers for this subject and class
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, 
+          where('role', '==', 'teacher'),
+          where('school', '==', user.school),
+          where('teacherProfile.classes', 'array-contains', {
+              grade: user.grade,
+              class: user.class,
+              subject: subject
+          })
+      );
+      
+      const teacherDocs = await getDocs(q);
+      
+      // Create notifications for each relevant teacher
+      teacherDocs.forEach(teacherDoc => {
+          const notificationRef = doc(collection(firestore, 'users', teacherDoc.id, 'notifications'));
+          const notificationData = {
+              explanationId: newExplanationRef.id,
+              classroomId: classroomId,
+              studentName: user.name,
+              subject: subject,
+              createdAt: serverTimestamp(),
+          };
+          batch.set(notificationRef, notificationData);
+      });
+
+
       // Create invitations for invited classmates
       for (const invitedUser of invited) {
         const invitationRef = doc(collection(firestore, 'users', invitedUser.uid, 'invitations'));
@@ -278,7 +306,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
 
       toast({
         title: "Success!",
-        description: `You've signed up to explain concepts for ${subject}. Invitations sent.`,
+        description: `You've signed up to explain concepts for ${subject}. Your teacher has been notified.`,
       });
 
       // Reset state and close dialog

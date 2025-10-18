@@ -9,6 +9,7 @@ import { BookOpen, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { InvitationBell } from "./invitation-bell";
+import { TeacherNotificationBell } from "./teacher-notification-bell";
 import type { UserProfile } from "@/lib/types";
 
 export function Header({ userProfile }: { userProfile: UserProfile | null }) {
@@ -34,7 +35,8 @@ export function Header({ userProfile }: { userProfile: UserProfile | null }) {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user.displayName || user.email}
             </span>
-            {userProfile?.role !== 'admin' && <InvitationBell currentUser={user} />}
+            {userProfile?.role === 'student' && <InvitationBell currentUser={user} />}
+            {userProfile?.role === 'teacher' && <TeacherNotificationBell currentUser={user} />}
             <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
               <LogOut className="size-5" />
             </Button>

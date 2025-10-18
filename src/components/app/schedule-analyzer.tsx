@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { AnalyzeScheduleFromImageOutput } from '@/ai/flows/analyze-schedule-from-image';
@@ -10,7 +11,8 @@ import {
   Briefcase,
   ChevronDown,
   Globe,
-  History
+  History,
+  Home
 } from 'lucide-react';
 
 import { analyzeScheduleAction } from '@/app/actions';
@@ -157,15 +159,6 @@ export function ScheduleAnalyzer() {
   }, [firestore, viewedSchool, viewedGrade, viewedClass]);
   const { data: classmates, loading: classmatesLoading } = useCollection<UserProfile>(classmatesQuery);
   
-  const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !viewedSchool || !viewedGrade || !viewedClass) return null;
-    return query(
-        collection(firestore, "users"),
-        where("school", "==", viewedSchool),
-        where("role", "==", "teacher"),
-        where("teacherProfile.classes", "array-contains", { grade: viewedGrade, class: viewedClass, subject: "MATH" }) // This is tricky, see note below
-    );
-  }, [firestore, viewedSchool, viewedGrade, viewedClass]);
   // Firestore limitation: We can't query for an object in an array without knowing the full object.
   // The query above is a placeholder. We'll fetch all teachers for the school and filter client-side.
   const allTeachersInSchoolQuery = useMemoFirebase(() => {
@@ -378,6 +371,14 @@ export function ScheduleAnalyzer() {
     }
   };
 
+  const backToMyClass = () => {
+    if (userProfile) {
+      setViewedSchool(userProfile.school);
+      setViewedGrade(userProfile.grade);
+      setViewedClass(userProfile.class);
+    }
+  }
+
   const getSchoolName = (schoolId?: string, grade?: string, classLetter?: string) => {
     if (!schoolId || !grade || !classLetter) return 'a class';
     const school = schoolList.find(s => s.id === schoolId);
@@ -412,6 +413,7 @@ export function ScheduleAnalyzer() {
                 setViewedSchool={setViewedSchool}
                 setViewedGrade={setViewedGrade}
                 setViewedClass={setViewedClass}
+                onBackToMyClass={backToMyClass}
             />
         </div>
        )
@@ -538,7 +540,7 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
 function ResultState({ 
   user, isViewingOwnClass, classroomId, activeSchedule, classmates, teachers, explanations, schoolName, onNewUpload,
   scheduleHistory, activeScheduleId, onSetActiveVersion, onDeleteVersion,
-  viewedSchool, viewedGrade, viewedClass, setViewedSchool, setViewedGrade, setViewedClass
+  viewedSchool, viewedGrade, viewedClass, setViewedSchool, setViewedGrade, setViewedClass, onBackToMyClass
 }: {
   user: UserProfile | null;
   isViewingOwnClass: boolean;
@@ -559,6 +561,7 @@ function ResultState({
   setViewedSchool: (value: string) => void;
   setViewedGrade: (value: string) => void;
   setViewedClass: (value: string) => void;
+  onBackToMyClass: () => void;
 }) {
   const lastUpdated = activeSchedule?.uploadedAt ? activeSchedule.uploadedAt.toDate().toLocaleString() : null;
 
@@ -575,6 +578,12 @@ function ResultState({
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {!isViewingOwnClass && (
+                <Button onClick={onBackToMyClass} variant="outline">
+                  <Home className="mr-2" />
+                  Back to My Class
+                </Button>
+              )}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon" title="Browse Schedules">

@@ -59,3 +59,12 @@ export interface Invitation {
   explanationDate: any; // Firestore Timestamp
   createdAt: any; // Firestore Timestamp
 }
+
+export interface TeacherNotification {
+  id: string;
+  explanationId: string;
+  classroomId: string;
+  studentName: string;
+  subject: string;
+  createdAt: any; // Firestore Timestamp
+}

@@ -90,7 +90,7 @@ function ExplanationCard({
     const isAdmin = currentUser?.role === 'admin';
     const isReviewed = explanation.completionStatus === 'explained' || explanation.completionStatus === 'not-explained';
     
-    const canDelete = (isAdmin || isOwner);
+    const canDelete = (isAdmin || isOwner || isTeacher);
 
     const loText = explanation.learningOutcome ? ` - LO ${explanation.learningOutcome}` : '';
 
