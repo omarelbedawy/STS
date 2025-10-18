@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import {
 import type { ClassroomSchedule } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { History, CheckCircle, Upload, RotateCw, Trash2, ChevronsUpDown } from 'lucide-react';
+import { History, CheckCircle, Upload, RotateCw, Trash2, ChevronDown } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -44,24 +43,19 @@ export function ScheduleHistory({
     });
 
     return (
-      <Collapsible defaultOpen={false}>
-        <Card className="w-full">
-            <CollapsibleTrigger asChild>
-                <div className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-t-lg p-6 hover:bg-muted">
-                    <div className="flex items-center gap-3">
-                        <History className="size-6 text-primary" />
-                        <div>
-                            <CardTitle>Schedule History</CardTitle>
-                            <CardDescription>Previous versions of the schedule.</CardDescription>
-                        </div>
-                    </div>
-                    <Button variant="ghost" size="icon" className="data-[state=open]:rotate-180 transition-transform">
-                        <ChevronsUpDown className="size-5" />
-                        <span className="sr-only">Toggle History</span>
-                    </Button>
-                </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+                <span><History className="inline-block mr-2" />Schedule Version History</span>
+                <ChevronDown className="h-4 w-4" />
+            </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+            <Card className="mt-2">
+                <CardHeader>
+                    <CardTitle>Schedule History</CardTitle>
+                    <CardDescription>Previous versions of the schedule. You can set an older version as active.</CardDescription>
+                </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-96 pr-4">
                         <div className="space-y-4">
@@ -142,8 +136,8 @@ export function ScheduleHistory({
                         </div>
                     </ScrollArea>
                 </CardContent>
-            </CollapsibleContent>
-        </Card>
+            </Card>
+        </CollapsibleContent>
       </Collapsible>
     );
 }

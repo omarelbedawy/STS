@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { AnalyzeScheduleFromImageOutput } from '@/ai/flows/analyze-schedule-from-image';
@@ -9,6 +8,7 @@ import {
   ArrowLeft,
   Users,
   Briefcase,
+  ChevronDown,
 } from 'lucide-react';
 
 import { analyzeScheduleAction } from '@/app/actions';
@@ -28,6 +28,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from '@/components/ui/progress';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -421,32 +426,42 @@ export function ScheduleAnalyzer() {
     <div className="space-y-8">
         <ReminderAlert explanations={explanations || []} currentUser={userProfile} />
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Browse Schedules</CardTitle>
-                <CardDescription>You are viewing the schedule for {getSchoolName(viewedSchool, viewedGrade, viewedClass)}.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Select value={viewedSchool} onValueChange={setViewedSchool}>
-                        <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
-                        <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select value={viewedGrade} onValueChange={setViewedGrade}>
-                        <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="10">Grade 10</SelectItem>
-                            <SelectItem value="11">Grade 11</SelectItem>
-                            <SelectItem value="12">Grade 12</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select value={viewedClass} onValueChange={setViewedClass}>
-                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                        <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-            </CardContent>
-        </Card>
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                  <span>Browse Schedules: {getSchoolName(viewedSchool, viewedGrade, viewedClass)}</span>
+                  <ChevronDown className="h-4 w-4" />
+              </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-2">
+                <CardHeader>
+                    <CardTitle>Browse Schedules</CardTitle>
+                    <CardDescription>You can view schedules for other classes and schools in read-only mode.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Select value={viewedSchool} onValueChange={setViewedSchool}>
+                            <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
+                            <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Select value={viewedGrade} onValueChange={setViewedGrade}>
+                            <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="10">Grade 10</SelectItem>
+                                <SelectItem value="11">Grade 11</SelectItem>
+                                <SelectItem value="12">Grade 12</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={viewedClass} onValueChange={setViewedClass}>
+                            <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                            <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
         {isViewingOwnClass && (
           <ScheduleHistory 
@@ -749,5 +764,3 @@ const toBase64 = (file: File): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
-
-    
