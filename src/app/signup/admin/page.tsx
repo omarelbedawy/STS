@@ -25,7 +25,6 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
-import { firebaseConfig } from "@/firebase/config";
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "Iamtheonlyadminonearth";
 
@@ -70,7 +69,7 @@ export default function AdminSignUpPage() {
       await updateProfile(user, { displayName: values.name });
       
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);

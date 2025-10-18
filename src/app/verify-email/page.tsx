@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MailCheck, MailWarning } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { firebaseConfig } from '@/firebase/config';
 import Link from 'next/link';
 
 export default function VerifyEmailPage() {
@@ -67,7 +66,7 @@ export default function VerifyEmailPage() {
     setIsSending(true);
     try {
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);

@@ -34,7 +34,6 @@ import { useState } from "react";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { schoolList } from "@/lib/schools";
-import { firebaseConfig } from "@/firebase/config";
 
 const classSubjectSchema = z.object({
   grade: z.enum(["10", "11", "12"]),
@@ -90,7 +89,7 @@ export default function TeacherSignUpPage() {
       await updateProfile(user, { displayName: values.name });
       
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
