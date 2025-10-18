@@ -10,7 +10,6 @@ if (!admin.apps.length) {
 exports.setCustomUserClaims = functions.https.onCall(async (data, context) => {
   // Ensure the function is called by an authenticated user.
   // Note: For sign-up, the user is authenticated right after creation.
-  // A more robust check for production might verify the caller's role if needed.
   if (!context.auth) {
     throw new functions.https.HttpsError(
       "unauthenticated",
@@ -28,6 +27,7 @@ exports.setCustomUserClaims = functions.https.onCall(async (data, context) => {
   }
 
   try {
+    // Set custom user claims on the user's auth record.
     await admin.auth().setCustomUserClaims(uid, claims);
     return {
       message: `Success! Custom claims set for user ${uid}.`,
