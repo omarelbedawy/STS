@@ -33,8 +33,8 @@ export default function VerifyEmailPage() {
         if (user) {
             await user.reload();
             if (user.emailVerified) {
-                // The toast and redirect will happen on the next render via the check above
-                // We just need to force a re-render if state changes, which `user.reload()` does indirectly
+                // This will trigger the effect to re-run and handle the redirect
+                router.push('/dashboard');
             }
         }
     }, 3000); // Check every 3 seconds
@@ -64,9 +64,8 @@ export default function VerifyEmailPage() {
     if (!user) return;
     setIsSending(true);
     try {
-      const origin = window.location.origin;
       const actionCodeSettings = {
-        url: `${origin}/dashboard`,
+        url: `https://sts-indol.vercel.app/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
