@@ -66,7 +66,6 @@ export default function StudentSignUpPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-
     if (!firestore) {
       toast({
         variant: "destructive",
@@ -76,7 +75,6 @@ export default function StudentSignUpPage() {
       setIsLoading(false);
       return;
     }
-
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
@@ -111,7 +109,6 @@ export default function StudentSignUpPage() {
       } else if (error.message) {
         description = error.message;
       }
-
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
@@ -172,7 +169,7 @@ export default function StudentSignUpPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="confirmPassword"
                   render={({ field }) => (
@@ -186,7 +183,7 @@ export default function StudentSignUpPage() {
                   )}
                 />
               </div>
-               <FormField
+              <FormField
                 control={form.control}
                 name="school"
                 render={({ field }) => (
@@ -199,8 +196,10 @@ export default function StudentSignUpPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {schoolList.map(school => (
-                          <SelectItem key={school.id} value={school.id}>{school.name}</SelectItem>
+                        {schoolList.map((school) => (
+                          <SelectItem key={school.id} value={school.id}>
+                            {school.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -241,11 +240,13 @@ export default function StudentSignUpPage() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Class" />
-                          </Trigger>
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {['a', 'b', 'c', 'd', 'e', 'f'].map(c => (
-                            <SelectItem key={c} value={c}>{c.toUpperCase()}</SelectItem>
+                          {["a", "b", "c", "d", "e", "f"].map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c.toUpperCase()}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

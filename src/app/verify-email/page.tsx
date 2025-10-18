@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,13 +20,28 @@ export default function VerifyEmailPage() {
 
   // Redirect if user status changes (e.g., they get verified)
   useEffect(() => {
+    const interval = setInterval(async () => {
+        if (user) {
+            await user.reload();
+            if (user.emailVerified) {
+                toast({
+                    title: 'Email Verified!',
+                    description: 'Your account is now active. Welcome to STS!',
+                });
+                router.push('/dashboard');
+            }
+        }
+    }, 3000); // Check every 3 seconds
+
     if (!userLoading && user?.emailVerified) {
-      toast({
-          title: 'Email Verified!',
-          description: 'Your account is now active. Welcome to STS!',
-      });
-      router.push('/dashboard');
+        toast({
+            title: 'Email Verified!',
+            description: 'Your account is now active. Welcome to STS!',
+        });
+        router.push('/dashboard');
     }
+    
+    return () => clearInterval(interval);
   }, [user, userLoading, router, toast]);
 
   // Timer for resend button
@@ -52,11 +66,7 @@ export default function VerifyEmailPage() {
     if (!user) return;
     setIsSending(true);
     try {
-      const actionCodeSettings = {
-        url: `${window.location.origin}/login`,
-        handleCodeInApp: true,
-      };
-      await sendEmailVerification(user, actionCodeSettings);
+      await sendEmailVerification(user);
       toast({
         title: 'Verification Email Sent',
         description: 'A new verification link has been sent to your inbox.',
@@ -121,22 +131,22 @@ export default function VerifyEmailPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Please click the link in that email to continue. If you don't see it, be sure to check your spam folder.
+            Please click the link in that email to continue. If you don't see it, be sure to check your spam folder. Once verified, you will be automatically redirected.
           </p>
-          <Button onClick={handleResendVerification} disabled={isSending}>
-            {isSending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Resend in {countdown}s
-              </>
-            ) : (
-              'Resend Verification Email'
-            )}
-          </Button>
-           <div className="mt-2 text-center text-sm">
-             <Button variant="link" onClick={() => router.push('/login')}>
-                Already verified? Log In
-             </Button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={() => router.push('/dashboard')}>
+                Continue to Dashboard
+            </Button>
+            <Button onClick={handleResendVerification} disabled={isSending} variant="secondary">
+                {isSending ? (
+                <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Resend in {countdown}s
+                </>
+                ) : (
+                'Resend Verification Email'
+                )}
+            </Button>
           </div>
           <div className="mt-6 text-center text-sm">
              <Button variant="link" onClick={handleSignOut}>
