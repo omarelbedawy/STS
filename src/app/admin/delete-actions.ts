@@ -9,7 +9,6 @@ import { UserRecord } from 'firebase-admin/auth';
 config({ path: '.env.local' });
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "Iamtheonlyadminonearth";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "";
 
 
 interface DeleteAllDataInput {
@@ -50,27 +49,22 @@ export async function deleteAllDataAction(
 
   try {
     if (input.target === 'users' || input.target === 'all') {
-      let adminUser: UserRecord | null = null;
-      if (ADMIN_EMAIL) {
-        try {
-          adminUser = await adminAuth.getUserByEmail(ADMIN_EMAIL);
-        } catch (error: any) {
-            // This case happens if the admin user doesn't exist, which is fine.
-           if (error.code !== 'auth/user-not-found') {
-                throw error;
-           }
-        }
-      }
-      
+      // Fetch all users to find the admin
       const listUsersResult = await adminAuth.listUsers(1000);
-      const uidsToDelete = listUsersResult.users
-        .filter(userRecord => userRecord.uid !== adminUser?.uid)
+      const allUsers = listUsersResult.users;
+      
+      // Find the admin user(s) by checking their custom claims or role in Firestore
+      const usersCollection = db.collection('users');
+      const adminDocs = await usersCollection.where('role', '==', 'admin').get();
+      const adminUids = adminDocs.docs.map(doc => doc.id);
+      
+      const uidsToDelete = allUsers
+        .filter(userRecord => !adminUids.includes(userRecord.uid))
         .map(userRecord => userRecord.uid);
 
       if (uidsToDelete.length > 0) {
         await adminAuth.deleteUsers(uidsToDelete);
         
-        const usersCollection = db.collection('users');
         const batch = db.batch();
         uidsToDelete.forEach(uid => {
             batch.delete(usersCollection.doc(uid));
