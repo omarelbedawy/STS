@@ -3,7 +3,7 @@
 
 import { Header } from "@/components/app/header";
 import { useUser } from "@/firebase/auth/use-user";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -24,10 +24,11 @@ function DashboardSkeleton() {
   );
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -44,12 +45,13 @@ export default function DashboardPage() {
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
   // This effect handles users who have verified their email but might not have a profile yet.
-  // This is a fallback and shouldn't be the primary profile creation method anymore.
   useEffect(() => {
-    if (!userProfileLoading && user && user.emailVerified && !userProfile) {
+    // A special status from the login page can prevent immediate redirection.
+    const status = searchParams.get('status');
+    if (!userProfileLoading && user && user.emailVerified && !userProfile && status !== 'verified-no-profile') {
        router.push('/login?status=verified-no-profile');
     }
-  }, [user, userProfile, userProfileLoading, router]);
+  }, [user, userProfile, userProfileLoading, router, searchParams]);
 
   const isReady = !userLoading && !!user && !userProfileLoading && !!userProfile;
   
@@ -92,10 +94,22 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Header userProfile={userProfile} />
       <main className="container mx-auto px-4 pb-12 pt-8">
-        <Suspense fallback={<DashboardSkeleton />}>
-          {isReady ? renderDashboard() : <DashboardSkeleton />}
-        </Suspense>
+        {isReady ? renderDashboard() : <DashboardSkeleton />}
       </main>
     </div>
   );
+}
+
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="sr-only">Loading...</p>
+            </div>
+        }>
+            <DashboardContent />
+        </Suspense>
+    )
 }
