@@ -588,19 +588,19 @@ function ResultState({
                   <div className="grid gap-4 py-4">
                       <Select value={viewedSchool} onValueChange={setViewedSchool}>
                           <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
-                          <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                          <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name} {user?.school === s.id && <span className="text-muted-foreground ml-2">(You)</span>}</SelectItem>)}</SelectContent>
                       </Select>
                       <Select value={viewedGrade} onValueChange={setViewedGrade}>
                           <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
                           <SelectContent>
-                              <SelectItem value="10">Grade 10</SelectItem>
-                              <SelectItem value="11">Grade 11</SelectItem>
-                              <SelectItem value="12">Grade 12</SelectItem>
+                              <SelectItem value="10">Grade 10 {user?.grade === "10" && <span className="text-muted-foreground ml-2">(You)</span>}</SelectItem>
+                              <SelectItem value="11">Grade 11 {user?.grade === "11" && <span className="text-muted-foreground ml-2">(You)</span>}</SelectItem>
+                              <SelectItem value="12">Grade 12 {user?.grade === "12" && <span className="text-muted-foreground ml-2">(You)</span>}</SelectItem>
                           </SelectContent>
                       </Select>
                       <Select value={viewedClass} onValueChange={setViewedClass}>
                           <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                          <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
+                          <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()} {user?.class === c && <span className="text-muted-foreground ml-2">(You)</span>}</SelectItem>)}</SelectContent>
                       </Select>
                   </div>
                 </SheetContent>
