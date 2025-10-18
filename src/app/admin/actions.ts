@@ -2,7 +2,6 @@
 'use server';
 
 import { deleteUser } from '@/ai/flows/delete-user';
-import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/firebase/server';
 
 
@@ -22,8 +21,8 @@ export async function deleteUserAction(
     if (!db) {
         throw new Error('Firestore is not initialized on the server.');
     }
-    // Delete from Firestore first
-    await deleteDoc(doc(db, "users", input.userId));
+    // Delete from Firestore first using the Admin SDK
+    await db.collection("users").doc(input.userId).delete();
 
     // Then, call the Genkit flow to delete from Firebase Auth
     await deleteUser({ userId: input.userId });
