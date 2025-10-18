@@ -43,7 +43,27 @@ export default function DashboardPage() {
 
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
+  // This effect handles users who have verified their email but might not have a profile yet.
+  // This is a fallback and shouldn't be the primary profile creation method anymore.
+  useEffect(() => {
+    if (!userProfileLoading && user && user.emailVerified && !userProfile) {
+       router.push('/login?status=verified-no-profile');
+    }
+  }, [user, userProfile, userProfileLoading, router]);
+
   const isReady = !userLoading && !!user && !userProfileLoading && !!userProfile;
+  
+  if (user && !user.emailVerified) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="mt-4">Please verify your email before logging in...</p>
+            <p className="text-sm text-muted-foreground">Redirecting you to the verification page.</p>
+          </div>
+      </div>
+    );
+  }
 
   if (!isReady) {
     return (
@@ -51,15 +71,6 @@ export default function DashboardPage() {
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="sr-only">Loading...</p>
       </div>
-    );
-  }
-  
-  if (user && !user.emailVerified) {
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4">Please verify your email before logging in...</p>
-        </div>
     );
   }
 
