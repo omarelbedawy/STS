@@ -9,6 +9,8 @@ import {
   Users,
   Briefcase,
   ChevronDown,
+  Globe,
+  History
 } from 'lucide-react';
 
 import { analyzeScheduleAction } from '@/app/actions';
@@ -21,6 +23,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -28,11 +38,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from '@/components/ui/progress';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -396,6 +401,16 @@ export function ScheduleAnalyzer() {
                 explanations={explanations}
                 schoolName={getSchoolName(viewedSchool, viewedGrade, viewedClass)}
                 onNewUpload={onEnterUploadMode}
+                scheduleHistory={scheduleHistory || []}
+                activeScheduleId={classroom?.activeScheduleId}
+                onSetActiveVersion={handleSetActiveVersion}
+                onDeleteVersion={handleDeleteVersion}
+                viewedSchool={viewedSchool}
+                viewedGrade={viewedGrade}
+                viewedClass={viewedClass}
+                setViewedSchool={setViewedSchool}
+                setViewedGrade={setViewedGrade}
+                setViewedClass={setViewedClass}
             />
         </div>
        )
@@ -425,52 +440,6 @@ export function ScheduleAnalyzer() {
   return (
     <div className="space-y-8">
         <ReminderAlert explanations={explanations || []} currentUser={userProfile} />
-
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                  <span>Browse Schedules: {getSchoolName(viewedSchool, viewedGrade, viewedClass)}</span>
-                  <ChevronDown className="h-4 w-4" />
-              </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card className="mt-2">
-                <CardHeader>
-                    <CardTitle>Browse Schedules</CardTitle>
-                    <CardDescription>You can view schedules for other classes and schools in read-only mode.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Select value={viewedSchool} onValueChange={setViewedSchool}>
-                            <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
-                            <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Select value={viewedGrade} onValueChange={setViewedGrade}>
-                            <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="10">Grade 10</SelectItem>
-                                <SelectItem value="11">Grade 11</SelectItem>
-                                <SelectItem value="12">Grade 12</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={viewedClass} onValueChange={setViewedClass}>
-                            <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                            <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {isViewingOwnClass && (
-          <ScheduleHistory 
-              history={scheduleHistory || []}
-              activeScheduleId={classroom?.activeScheduleId}
-              onSetActive={handleSetActiveVersion}
-              onDelete={handleDeleteVersion}
-          />
-        )}
         {renderMainContent()}
     </div>
   );
@@ -565,7 +534,11 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   );
 }
 
-function ResultState({ user, isViewingOwnClass, classroomId, activeSchedule, classmates, teachers, explanations, schoolName, onNewUpload }: {
+function ResultState({ 
+  user, isViewingOwnClass, classroomId, activeSchedule, classmates, teachers, explanations, schoolName, onNewUpload,
+  scheduleHistory, activeScheduleId, onSetActiveVersion, onDeleteVersion,
+  viewedSchool, viewedGrade, viewedClass, setViewedSchool, setViewedGrade, setViewedClass
+}: {
   user: UserProfile | null;
   isViewingOwnClass: boolean;
   classroomId: string | null;
@@ -575,6 +548,16 @@ function ResultState({ user, isViewingOwnClass, classroomId, activeSchedule, cla
   explanations: Explanation[] | null;
   schoolName: string;
   onNewUpload: () => void;
+  scheduleHistory: ClassroomSchedule[];
+  activeScheduleId?: string;
+  onSetActiveVersion: (id: string) => void;
+  onDeleteVersion: (id: string) => void;
+  viewedSchool?: string;
+  viewedGrade?: string;
+  viewedClass?: string;
+  setViewedSchool: (value: string) => void;
+  setViewedGrade: (value: string) => void;
+  setViewedClass: (value: string) => void;
 }) {
   const lastUpdated = activeSchedule?.uploadedAt ? activeSchedule.uploadedAt.toDate().toLocaleString() : null;
 
@@ -590,7 +573,61 @@ function ResultState({ user, isViewingOwnClass, classroomId, activeSchedule, cla
                 {!isViewingOwnClass && <span className="font-bold text-accent"> (Read-only)</span>}
               </CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" title="Browse Schedules">
+                    <Globe className="size-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Browse Schedules</SheetTitle>
+                    <SheetDescription>You can view schedules for other classes and schools in read-only mode.</SheetDescription>
+                  </SheetHeader>
+                  <div className="grid gap-4 py-4">
+                      <Select value={viewedSchool} onValueChange={setViewedSchool}>
+                          <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
+                          <SelectContent>{schoolList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={viewedGrade} onValueChange={setViewedGrade}>
+                          <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="10">Grade 10</SelectItem>
+                              <SelectItem value="11">Grade 11</SelectItem>
+                              <SelectItem value="12">Grade 12</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      <Select value={viewedClass} onValueChange={setViewedClass}>
+                          <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                          <SelectContent>{['a','b','c','d','e','f'].map(c => <SelectItem key={c} value={c}>Class {c.toUpperCase()}</SelectItem>)}</SelectContent>
+                      </Select>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {isViewingOwnClass && (
+                 <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon" title="Schedule History">
+                      <History className="size-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent className="sm:max-w-md">
+                     <SheetHeader>
+                      <SheetTitle>Schedule History</SheetTitle>
+                      <SheetDescription>Previous versions of the schedule. You can set an older version as active.</SheetDescription>
+                    </SheetHeader>
+                    <ScheduleHistory 
+                        history={scheduleHistory}
+                        activeScheduleId={activeScheduleId}
+                        onSetActive={onSetActiveVersion}
+                        onDelete={onDeleteVersion}
+                    />
+                  </SheetContent>
+                </Sheet>
+              )}
+
               {isViewingOwnClass && (
                 <Button onClick={onNewUpload} variant="outline">
                   <Upload className="mr-2" />

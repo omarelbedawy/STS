@@ -1,17 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import type { ClassroomSchedule } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { History, CheckCircle, Upload, RotateCw, Trash2, ChevronDown } from 'lucide-react';
+import { CheckCircle, Upload, RotateCw, Trash2 } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -43,101 +37,83 @@ export function ScheduleHistory({
     });
 
     return (
-      <Collapsible>
-        <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-                <span><History className="inline-block mr-2" />Schedule Version History</span>
-                <ChevronDown className="h-4 w-4" />
-            </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-            <Card className="mt-2">
-                <CardHeader>
-                    <CardTitle>Schedule History</CardTitle>
-                    <CardDescription>Previous versions of the schedule. You can set an older version as active.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-96 pr-4">
-                        <div className="space-y-4">
-                            {sortedHistory.map((item) => {
-                                const is_active = item.id === activeScheduleId;
-                                const uploadedAtDate = item.uploadedAt?.toDate();
-                                const timeAgo = uploadedAtDate ? formatDistanceToNow(uploadedAtDate, { addSuffix: true }) : 'a while ago';
+        <ScrollArea className="h-full">
+            <div className="space-y-4 p-1">
+                {sortedHistory.map((item) => {
+                    const is_active = item.id === activeScheduleId;
+                    const uploadedAtDate = item.uploadedAt?.toDate();
+                    const timeAgo = uploadedAtDate ? formatDistanceToNow(uploadedAtDate, { addSuffix: true }) : 'a while ago';
 
-                                return (
-                                    <div key={item.id} className={cn('rounded-lg border p-3 transition-all', is_active ? 'bg-primary/10 border-primary' : 'bg-card')}>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="text-sm font-medium flex items-center gap-2">
-                                                    <Upload className="size-4" />
-                                                    Uploaded by {item.uploadedBy}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                {is_active ? (
-                                                    <div className="flex items-center gap-1.5 text-xs text-green-600 font-semibold">
-                                                        <CheckCircle className="size-4" /> Active
-                                                    </div>
-                                                ) : (
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-7">
-                                                                <RotateCw className="mr-2 size-3"/> Set Active
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Set this version as active?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    This will make the schedule uploaded by {item.uploadedBy} on {uploadedAtDate?.toLocaleDateString()} the active schedule for the class.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => onSetActive(item.id)}>
-                                                                    Yes, Set Active
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                )}
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                                                            <Trash2 className="size-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete this version?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This action is permanent and cannot be undone. Are you sure you want to delete this schedule version?
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => onDelete(item.id)} className="bg-destructive hover:bg-destructive/90">
-                                                                Yes, Delete
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {sortedHistory.length === 0 && (
-                                <div className="text-center text-muted-foreground py-10">
-                                    No version history found.
+                    return (
+                        <div key={item.id} className={cn('rounded-lg border p-3 transition-all', is_active ? 'bg-primary/10 border-primary' : 'bg-card')}>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-sm font-medium flex items-center gap-2">
+                                        <Upload className="size-4" />
+                                        Uploaded by {item.uploadedBy}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
                                 </div>
-                            )}
+                                <div className="flex items-center gap-1">
+                                    {is_active ? (
+                                        <div className="flex items-center gap-1.5 text-xs text-green-600 font-semibold">
+                                            <CheckCircle className="size-4" /> Active
+                                        </div>
+                                    ) : (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="h-7">
+                                                    <RotateCw className="mr-2 size-3"/> Set Active
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Set this version as active?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will make the schedule uploaded by {item.uploadedBy} on {uploadedAtDate?.toLocaleDateString()} the active schedule for the class.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => onSetActive(item.id)}>
+                                                        Yes, Set Active
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                                                <Trash2 className="size-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete this version?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action is permanent and cannot be undone. Are you sure you want to delete this schedule version?
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => onDelete(item.id)} className="bg-destructive hover:bg-destructive/90">
+                                                    Yes, Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </div>
                         </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-        </CollapsibleContent>
-      </Collapsible>
+                    );
+                })}
+                {sortedHistory.length === 0 && (
+                    <div className="text-center text-muted-foreground py-10">
+                        No version history found.
+                    </div>
+                )}
+            </div>
+        </ScrollArea>
     );
 }
