@@ -76,6 +76,7 @@ export default function AdminSignUpPage() {
 
       const userDocRef = doc(firestore, "users", user.uid);
       await setDoc(userDocRef, {
+        uid: user.uid,
         name: values.name,
         email: values.email,
         role: 'admin',

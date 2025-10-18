@@ -95,6 +95,7 @@ export default function TeacherSignUpPage() {
       
       const userDocRef = doc(firestore, "users", user.uid);
       await setDoc(userDocRef, {
+        uid: user.uid,
         name: values.name,
         email: values.email,
         role: 'teacher',

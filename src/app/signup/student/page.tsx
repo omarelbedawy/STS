@@ -82,17 +82,19 @@ export default function StudentSignUpPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const userDocRef = doc(firestore, "users", user.uid);
-      await setDoc(userDocRef, {
+      const userProfileData = {
         uid: user.uid,
         name: values.name,
         email: values.email,
-        role: 'student',
+        role: 'student' as const,
         school: values.school,
         grade: values.grade,
         class: values.class
-      });
-
+      };
+      
+      const userDocRef = doc(firestore, "users", user.uid);
+      await setDoc(userDocRef, userProfileData);
+      
       await updateProfile(user, { displayName: values.name });
 
       await sendEmailVerification(user);
