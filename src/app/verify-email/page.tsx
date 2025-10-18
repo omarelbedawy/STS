@@ -19,12 +19,10 @@ export default function VerifyEmailPage() {
   const [isSending, setIsSending] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
-  // Redirect if user is not logged in or is already verified
+  // Redirect if user status changes (e.g., they get verified)
   useEffect(() => {
     if (!userLoading) {
-      if (!user) {
-        router.push('/login');
-      } else if (user.emailVerified) {
+      if (user?.emailVerified) {
         toast({
             title: 'Email Verified!',
             description: 'Your account is now active. Welcome to STS!',
@@ -58,14 +56,14 @@ export default function VerifyEmailPage() {
         const intervalId = setInterval(async () => {
             if (auth.currentUser) {
                 await auth.currentUser.reload();
-                // State will be updated by the onAuthStateChanged listener in useUser hook
+                // State is updated by the onAuthStateChanged listener in useUser hook,
                 // which will trigger the redirection effect above.
             }
         }, 5000); // Check every 5 seconds
 
         return () => clearInterval(intervalId);
     }
-  }, [user, router]);
+  }, [user]);
 
 
   const handleResendVerification = async () => {
@@ -96,11 +94,33 @@ export default function VerifyEmailPage() {
     router.push('/login');
   }
 
-  // Show a loading screen until user status is determined
-  if (userLoading || !user || user.emailVerified) {
+  // Show a loading screen until user status is determined or if they are already verified
+  if (userLoading || user?.emailVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4">Loading your dashboard...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+       <div className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="w-full max-w-lg text-center">
+             <CardHeader>
+                <MailWarning className="mx-auto h-12 w-12 text-destructive" />
+                <CardTitle className="mt-4">You are not logged in</CardTitle>
+                 <CardDescription>
+                    Please log in to continue the verification process.
+                 </CardDescription>
+             </CardHeader>
+             <CardContent>
+                 <Button asChild>
+                    <Link href="/login">Go to Login</Link>
+                </Button>
+             </CardContent>
+        </Card>
       </div>
     );
   }
