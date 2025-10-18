@@ -8,17 +8,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { firebaseConfig } from '@/firebase/config';
+import { auth as adminAuth } from '@/firebase/server';
 
-// Initialize Firebase Admin SDK if it hasn't been already.
-// This runs in a secure server environment.
-if (getApps().length === 0) {
-  initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
-}
 
 const DeleteUserInputSchema = z.object({
   userId: z.string().describe('The UID of the user to be deleted.'),
@@ -34,7 +25,7 @@ export const deleteUser = ai.defineFlow(
   },
   async ({ userId }) => {
     try {
-      await getAuth().deleteUser(userId);
+      await adminAuth.deleteUser(userId);
       console.log(`Successfully deleted user with UID: ${userId}`);
     } catch (error: any) {
       console.error(`Error deleting user ${userId}:`, error);

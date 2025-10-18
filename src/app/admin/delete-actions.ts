@@ -1,8 +1,7 @@
 
 'use server';
 
-import { getAuth } from 'firebase-admin/auth';
-import { db } from '@/firebase/server';
+import { db, auth as adminAuth } from '@/firebase/server';
 import { CollectionReference } from 'firebase-admin/firestore';
 
 const ADMIN_SECRET = "Iamtheonlyadminonearth";
@@ -46,10 +45,10 @@ export async function deleteAllDataAction(
   try {
     if (input.target === 'users' || input.target === 'all') {
       // 1. Delete all users from Authentication
-      const listUsersResult = await getAuth().listUsers(1000);
+      const listUsersResult = await adminAuth.listUsers(1000);
       const uids = listUsersResult.users.map(userRecord => userRecord.uid);
       if (uids.length > 0) {
-        await getAuth().deleteUsers(uids);
+        await adminAuth.deleteUsers(uids);
       }
       
       // 2. Delete all documents from the 'users' collection in Firestore
