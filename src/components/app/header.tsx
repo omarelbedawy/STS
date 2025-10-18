@@ -9,8 +9,9 @@ import { BookOpen, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { InvitationBell } from "./invitation-bell";
+import type { UserProfile } from "@/lib/types";
 
-export function Header() {
+export function Header({ userProfile }: { userProfile: UserProfile | null }) {
   const { user } = useUser();
   const router = useRouter();
 
@@ -33,7 +34,7 @@ export function Header() {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user.displayName || user.email}
             </span>
-            <InvitationBell currentUser={user} />
+            {userProfile?.role !== 'admin' && <InvitationBell currentUser={user} />}
             <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
               <LogOut className="size-5" />
             </Button>

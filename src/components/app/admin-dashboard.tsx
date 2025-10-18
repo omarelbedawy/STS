@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { deleteUserAction } from "@/app/admin/actions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteData } from "./delete-data";
 
 interface Classroom {
     activeScheduleId?: string;
@@ -210,7 +211,7 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
   const [selectedSchool, setSelectedSchool] = useState<string>(schoolList[0].id);
   const [selectedGrade, setSelectedGrade] = useState<string>("11");
   const [selectedClass, setSelectedClass] = useState<string>("c");
-  const [view, setView] = useState<'users' | 'classrooms'>('classrooms');
+  const [view, setView] = useState<'users' | 'classrooms' | 'dangerZone'>('classrooms');
 
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -384,8 +385,9 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                         <CardDescription>Oversee all schools, classes, and users.</CardDescription>
                     </div>
                      <div className="flex gap-2">
-                        <Button variant={view === 'classrooms' ? 'default' : 'outline'} onClick={() => setView('classrooms')}>Classrooms</Button>
-                        <Button variant={view === 'users' ? 'default' : 'outline'} onClick={() => setView('users')}>Users</Button>
+                        <Button variant={view === 'classrooms' ? 'secondary' : 'outline'} onClick={() => setView('classrooms')}>Classrooms</Button>
+                        <Button variant={view === 'users' ? 'secondary' : 'outline'} onClick={() => setView('users')}>Users</Button>
+                        <Button variant={view === 'dangerZone' ? 'destructive' : 'outline'} onClick={() => setView('dangerZone')}>Danger Zone</Button>
                     </div>
                 </div>
             </CardHeader>
@@ -415,8 +417,7 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
 
       {view === 'classrooms' && renderClassroomContent()}
       {view === 'users' && <UserManagement adminUser={admin} />}
+      {view === 'dangerZone' && <DeleteData />}
     </div>
   );
 }
-
-    

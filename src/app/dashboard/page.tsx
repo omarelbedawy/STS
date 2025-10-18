@@ -86,7 +86,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header />
+      <Header userProfile={userProfile} />
       <main className="container mx-auto px-4 pb-12 pt-8">
         <Suspense fallback={<DashboardSkeleton />}>
           {renderDashboard()}
@@ -95,5 +95,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
