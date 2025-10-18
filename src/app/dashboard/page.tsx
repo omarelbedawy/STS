@@ -80,7 +80,8 @@ export default function DashboardPage() {
   }, [user, userProfile, userProfileLoading, firestore, claims]);
 
 
-  const isReady = !userLoading && !!user?.emailVerified && !userProfileLoading;
+  const isReady = !userLoading && !!user && !userProfileLoading && (!!userProfile || !!claims?.role);
+
 
   if (!isReady) {
     return (
@@ -88,6 +89,16 @@ export default function DashboardPage() {
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="sr-only">Loading...</p>
       </div>
+    );
+  }
+  
+  if (user && !user.emailVerified) {
+    router.push('/verify-email');
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4">Redirecting to email verification...</p>
+        </div>
     );
   }
 

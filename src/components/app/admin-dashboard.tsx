@@ -48,7 +48,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScheduleTable } from "./schedule-table";
 import { useFirestore, useCollection, useDoc, useUser } from "@/firebase";
-import { doc, collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } from "firebase/firestore";
 import { ClassmatesDashboard } from "./classmates-dashboard";
 import { Loader2, Trash2, History } from "lucide-react";
 import { schoolList } from "@/lib/schools";
@@ -88,25 +88,18 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
 
 
   const handleDeleteUser = async (userId: string) => {
-    if (!firestore) return;
-    
-    toast({ title: "Deleting User...", description: "Removing user profile and authentication entry."});
-    
-    const originalUsers = [...users];
+    toast({ title: "Deleting User...", description: "Please wait..."});
 
     const result = await deleteUserAction({ userId });
 
     if (result.success) {
-      // Optimistically update UI
-      setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
-      toast({ title: "User Deleted", description: "The user has been successfully removed from the system."});
+        // UI will update automatically via Firestore snapshot listener
+        toast({ title: "User Deleted", description: "The user has been successfully removed."});
     } else {
-       // Revert UI on failure
-      setUsers(originalUsers);
-      console.error("Error deleting user: ", result.message);
-      toast({ variant: "destructive", title: "Deletion Failed", description: result.message || "Could not delete user."});
+        console.error("Error deleting user: ", result.message);
+        toast({ variant: "destructive", title: "Deletion Failed", description: result.message || "Could not delete user."});
     }
-  }
+  };
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];

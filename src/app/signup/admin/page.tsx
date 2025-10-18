@@ -73,6 +73,7 @@ export default function AdminSignUpPage() {
         }
       });
       
+      // Force refresh of the token to get custom claims
       await user.getIdToken(true);
       
       const actionCodeSettings = {
