@@ -81,19 +81,15 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
   const handleDeleteUser = async (userId: string) => {
     if (!firestore) return;
     
-    const originalUsers = users;
-    // Optimistically update UI
-    setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
-    
     toast({ title: "Deleting User...", description: "Removing user profile and authentication entry."});
 
     const result = await deleteUserAction({ userId });
 
     if (result.success) {
+      // Optimistically update UI
+      setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
       toast({ title: "User Deleted", description: "The user has been successfully removed from the system."});
     } else {
-      // Revert UI on failure
-      setUsers(originalUsers);
       console.error("Error deleting user: ", result.message);
       toast({ variant: "destructive", title: "Deletion Failed", description: result.message || "Could not delete user."});
     }
