@@ -29,6 +29,7 @@ function DashboardContent() {
   const firestore = useFirestore();
   const router = useRouter();
 
+  // Redirect to login if user is not loaded and not loading.
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
@@ -61,9 +62,8 @@ function DashboardContent() {
     );
   }
 
-  // If the user object is loaded and exists, but the profile is still loading,
-  // show a spinner instead of redirecting. This handles the race condition.
-  if ((userLoading || userProfileLoading) || (!user && !userLoading)) {
+  // Show a loading spinner while user or profile data is being fetched.
+  if (userLoading || userProfileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
