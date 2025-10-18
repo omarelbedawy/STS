@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Header } from "@/components/app/header";
@@ -10,21 +9,10 @@ import { Loader2 } from "lucide-react";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import type { UserProfile } from "@/lib/types";
 import { doc } from "firebase/firestore";
-import dynamic from 'next/dynamic';
 import { Skeleton } from "@/components/ui/skeleton";
-
-const TeacherDashboard = dynamic(() => import('@/components/app/teacher-dashboard').then(mod => mod.TeacherDashboard), { 
-  loading: () => <DashboardSkeleton />,
-  ssr: false 
-});
-const AdminDashboard = dynamic(() => import('@/components/app/admin-dashboard').then(mod => mod.AdminDashboard), {
-  loading: () => <DashboardSkeleton />,
-  ssr: false
-});
-const ScheduleAnalyzer = dynamic(() => import('@/components/app/schedule-analyzer').then(mod => mod.ScheduleAnalyzer), {
-  loading: () => <DashboardSkeleton />,
-  ssr: false
-});
+import { TeacherDashboard } from '@/components/app/teacher-dashboard';
+import { AdminDashboard } from '@/components/app/admin-dashboard';
+import { ScheduleAnalyzer } from '@/components/app/schedule-analyzer';
 
 
 function DashboardSkeleton() {
