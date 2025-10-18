@@ -1,23 +1,34 @@
 
 const functions = require("firebase-functions");
-const { onCall } = require("firebase-functions/v2/https");
-const { initializeApp } = require("firebase-admin/app");
-const { getAuth } = require("firebase-admin/auth");
+const admin = require("firebase-admin");
 
-initializeApp();
+// Ensure Firebase Admin is initialized only once
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
-exports.setCustomUserClaims = onCall(async (request) => {
-  if (!request.auth) {
+exports.setCustomUserClaims = functions.https.onCall(async (data, context) => {
+  // Ensure the function is called by an authenticated user.
+  // Note: For sign-up, the user is authenticated right after creation.
+  // A more robust check for production might verify the caller's role if needed.
+  if (!context.auth) {
     throw new functions.https.HttpsError(
       "unauthenticated",
       "The function must be called while authenticated."
     );
   }
 
-  const { uid, claims } = request.data;
+  const { uid, claims } = data;
+
+  if (!uid || !claims) {
+      throw new functions.https.HttpsError(
+          "invalid-argument",
+          "The function must be called with 'uid' and 'claims' arguments."
+      );
+  }
 
   try {
-    await getAuth().setCustomUserClaims(uid, claims);
+    await admin.auth().setCustomUserClaims(uid, claims);
     return {
       message: `Success! Custom claims set for user ${uid}.`,
     };

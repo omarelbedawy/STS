@@ -93,7 +93,6 @@ export default function TeacherSignUpPage() {
         }
       });
       
-      // Force refresh of the token to get the new claims
       await user.getIdToken(true);
 
       const actionCodeSettings = {
@@ -110,6 +109,7 @@ export default function TeacherSignUpPage() {
       router.push("/verify-email");
 
     } catch (error: any) {
+      console.error("Sign up error:", error);
       toast({ variant: "destructive", title: "Sign Up Failed", description: error.message || "An unexpected error occurred." });
     } finally {
       setIsLoading(false);

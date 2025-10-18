@@ -72,7 +72,6 @@ export default function StudentSignUpPage() {
 
       await updateProfile(user, { displayName: values.name });
       
-      // Set custom claims before sending verification email
       const functions = getFunctions(auth.app);
       const setCustomUserClaims = httpsCallable(functions, 'setCustomUserClaims');
       await setCustomUserClaims({
@@ -84,8 +83,7 @@ export default function StudentSignUpPage() {
           class: values.class
         }
       });
-
-      // Force refresh of the token to get the new claims
+      
       await user.getIdToken(true);
 
       const actionCodeSettings = {
@@ -102,6 +100,7 @@ export default function StudentSignUpPage() {
       router.push("/verify-email");
 
     } catch (error: any) {
+      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",

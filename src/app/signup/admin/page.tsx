@@ -63,7 +63,6 @@ export default function AdminSignUpPage() {
 
       await updateProfile(user, { displayName: values.name });
 
-      // Set custom claims before sending verification email
       const functions = getFunctions(auth.app);
       const setCustomUserClaims = httpsCallable(functions, 'setCustomUserClaims');
       await setCustomUserClaims({
@@ -74,7 +73,6 @@ export default function AdminSignUpPage() {
         }
       });
       
-      // Force refresh of the token to get the new claims
       await user.getIdToken(true);
       
       const actionCodeSettings = {
@@ -91,6 +89,7 @@ export default function AdminSignUpPage() {
       router.push("/verify-email");
 
     } catch (error: any) {
+      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
