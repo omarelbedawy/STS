@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +32,6 @@ import { schoolList } from "@/lib/schools";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
-
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
@@ -46,7 +44,6 @@ const formSchema = z.object({
   message: "Passwords do not match",
   path: ["confirmPassword"],
 });
-
 
 export default function StudentSignUpPage() {
   const router = useRouter();
@@ -69,6 +66,7 @@ export default function StudentSignUpPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+
     if (!firestore) {
       toast({
         variant: "destructive",
@@ -78,6 +76,7 @@ export default function StudentSignUpPage() {
       setIsLoading(false);
       return;
     }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
@@ -86,42 +85,40 @@ export default function StudentSignUpPage() {
         uid: user.uid,
         name: values.name,
         email: values.email,
-        role: 'student' as const,
+        role: "student" as const,
         school: values.school,
         grade: values.grade,
-        class: values.class
+        class: values.class,
       };
-      
+
       const userDocRef = doc(firestore, "users", user.uid);
       await setDoc(userDocRef, userProfileData);
-      
-      await updateProfile(user, { displayName: values.name });
 
+      await updateProfile(user, { displayName: values.name });
       await sendEmailVerification(user);
-      
+
       toast({
         title: "Account Created",
         description: "Please check your inbox to verify your email address.",
       });
 
       router.push("/verify-email");
-
     } catch (error: any) {
       console.error("Sign up error:", error);
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.code === "auth/email-already-in-use") {
         description = "This email is already registered. Please use a different email or log in.";
       } else if (error.message) {
         description = error.message;
       }
-      
+
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
         description: description,
       });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }
 
