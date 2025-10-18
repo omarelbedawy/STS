@@ -24,6 +24,8 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
+import { functions } from "@/firebase/functions";
+import { httpsCallable } from "firebase/functions";
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "Iamtheonlyadminonearth";
 
@@ -86,10 +88,10 @@ export default function AdminSignUpPage() {
       
       toast({
         title: "Admin Account Created",
-        description: "Please check your inbox to verify your email address before logging in.",
+        description: "Please check your inbox to verify your email address.",
       });
 
-      router.push("/login");
+      router.push("/verify-email");
 
     } catch (error: any) {
       console.error("Sign up error:", error);

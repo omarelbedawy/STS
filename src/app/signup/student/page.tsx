@@ -33,6 +33,7 @@ import { schoolList } from "@/lib/schools";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
+
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
@@ -81,11 +82,10 @@ export default function StudentSignUpPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      await updateProfile(user, { displayName: values.name });
-
-      // Create user profile directly in Firestore
+      // Set user profile in Firestore
       const userDocRef = doc(firestore, "users", user.uid);
       await setDoc(userDocRef, {
+        uid: user.uid,
         name: values.name,
         email: values.email,
         role: 'student',
@@ -94,14 +94,18 @@ export default function StudentSignUpPage() {
         class: values.class
       });
 
+      // Update auth profile
+      await updateProfile(user, { displayName: values.name });
+
+      // Send verification email
       await sendEmailVerification(user);
       
       toast({
         title: "Account Created",
-        description: "Please check your inbox to verify your email address before logging in.",
+        description: "Please check your inbox to verify your email address.",
       });
 
-      router.push("/login");
+      router.push("/verify-email");
 
     } catch (error: any) {
       console.error("Sign up error:", error);
@@ -241,7 +245,7 @@ export default function StudentSignUpPage() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Class" />
-                          </SelectTrigger>
+                          </Trigger>
                         </FormControl>
                         <SelectContent>
                           {['a', 'b', 'c', 'd', 'e', 'f'].map(c => (

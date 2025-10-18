@@ -32,6 +32,8 @@ import { useState } from "react";
 import { schoolList } from "@/lib/schools";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
+import { functions } from "@/firebase/functions";
+import { httpsCallable } from "firebase/functions";
 
 
 const classSubjectSchema = z.object({
@@ -109,10 +111,10 @@ export default function TeacherSignUpPage() {
       
       toast({
         title: "Account Created",
-        description: "Please check your inbox to verify your email address before logging in.",
+        description: "Please check your inbox to verify your email address.",
       });
 
-      router.push("/login");
+      router.push("/verify-email");
 
     } catch (error: any) {
       console.error("Sign up error:", error);
