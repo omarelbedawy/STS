@@ -83,6 +83,7 @@ export default function AdminSignUpPage() {
       });
       
       const actionCodeSettings = {
+        url: "https://sts-indol.vercel.app/dashboard",
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
