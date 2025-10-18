@@ -81,7 +81,7 @@ export default function StudentSignUpPage() {
       await updateProfile(user, { displayName: values.name });
       
       const actionCodeSettings = {
-        url: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}/dashboard`,
+        url: `${window.location.origin}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);

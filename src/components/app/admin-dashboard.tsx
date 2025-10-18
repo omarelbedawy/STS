@@ -37,18 +37,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { ScheduleTable } from "./schedule-table";
 import { useFirestore, useCollection, useDoc, useUser } from "@/firebase";
-import { doc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { doc, collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } from "firebase/firestore";
 import { ClassmatesDashboard } from "./classmates-dashboard";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, History } from "lucide-react";
 import { schoolList } from "@/lib/schools";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { deleteUserAction } from "@/app/admin/actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteData } from "./delete-data";
+import { ScheduleHistory } from "./schedule-history";
 
 interface Classroom {
     activeScheduleId?: string;
@@ -84,13 +93,12 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
     toast({ title: "Deleting User...", description: "Removing user profile and authentication entry."});
     
     const originalUsers = [...users];
-    // Optimistically update UI
-    setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
-
 
     const result = await deleteUserAction({ userId });
 
     if (result.success) {
+      // Optimistically update UI
+      setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
       toast({ title: "User Deleted", description: "The user has been successfully removed from the system."});
     } else {
        // Revert UI on failure
@@ -243,6 +251,12 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
     return doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId);
   }, [firestore, classroomId, classroom?.activeScheduleId]);
   const { data: activeSchedule, loading: activeScheduleLoading } = useDoc<ClassroomSchedule>(activeScheduleDocRef);
+  
+  const scheduleHistoryQuery = useMemo(() => {
+    if (!firestore || !classroomId) return null;
+    return collection(firestore, 'classrooms', classroomId, 'schedules');
+  }, [firestore, classroomId]);
+  const { data: scheduleHistory, loading: scheduleHistoryLoading } = useCollection<ClassroomSchedule>(scheduleHistoryQuery);
 
 
   const classmatesQuery = useMemo(() => {
@@ -262,24 +276,28 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
   }, [firestore, classroomId]);
   const { data: explanations, loading: explanationsLoading } = useCollection<Explanation>(explanationsQuery);
 
-  const isLoading = classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading;
+  const isLoading = classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading || scheduleHistoryLoading;
   const schoolName = schoolList.find(s => s.id === selectedSchool)?.name || selectedSchool;
   
   const handleDeleteSchedule = async () => {
     if (!firestore || !classroomId || !classroom?.activeScheduleId) return;
     try {
-      // This might need more complex logic depending on how you want to handle history.
-      // For now, let's assume we delete the specific schedule document. A safer approach
-      // might be to just deactivate it.
-      await deleteDoc(doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId));
+        const batch = writeBatch(firestore);
 
-      // Then, we need to clear the activeScheduleId from the classroom document.
-      await deleteDoc(doc(firestore, 'classrooms', classroomId));
+        // 1. Delete the active schedule document
+        const scheduleToDeleteRef = doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId);
+        batch.delete(scheduleToDeleteRef);
 
-      toast({ title: "Schedule Deleted", description: "The active schedule for this class has been removed."});
+        // 2. Clear the activeScheduleId from the classroom document
+        const classroomDocRef = doc(firestore, 'classrooms', classroomId);
+        batch.update(classroomDocRef, { activeScheduleId: '' });
+        
+        await batch.commit();
+
+        toast({ title: "Schedule Deleted", description: "The active schedule for this class has been removed."});
     } catch (error) {
-      console.error("Error deleting schedule: ", error);
-      toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete schedule."});
+        console.error("Error deleting schedule: ", error);
+        toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete schedule."});
     }
   };
 
@@ -304,7 +322,54 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
         console.error("Error deleting all explanations: ", error);
         toast({ variant: "destructive", title: "Deletion Failed", description: "Could not clear commitments."});
     }
-  }
+  };
+
+  const handleSetActiveVersion = async (scheduleId: string) => {
+    if (!firestore || !classroomId) return;
+    const classroomDocRef = doc(firestore, 'classrooms', classroomId);
+    try {
+      await updateDoc(classroomDocRef, { activeScheduleId: scheduleId });
+      toast({ title: 'Schedule Set Active', description: 'This schedule is now visible to the class.' });
+    } catch (error: any) {
+        // If the classroom document does not exist, create it.
+        if (error.code === 'not-found') {
+            await setDoc(classroomDocRef, { activeScheduleId: scheduleId });
+            toast({ title: 'Schedule Set Active', description: 'This schedule is now visible to the class.' });
+        } else {
+            console.error('Error setting active schedule:', error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not set active schedule.'});
+        }
+    }
+  };
+
+  const handleDeleteVersion = async (scheduleId: string) => {
+    if (!firestore || !classroomId || !scheduleHistory) return;
+
+    try {
+      const scheduleToDeleteRef = doc(firestore, 'classrooms', classroomId, 'schedules', scheduleId);
+      
+      // If we are deleting the currently active schedule...
+      if (classroom?.activeScheduleId === scheduleId) {
+        const remainingSchedules = scheduleHistory.filter(s => s.id !== scheduleId);
+        const sortedRemaining = [...remainingSchedules].sort((a, b) => (b.uploadedAt?.toDate()?.getTime() || 0) - (a.uploadedAt?.toDate()?.getTime() || 0));
+        const newActiveId = sortedRemaining.length > 0 ? sortedRemaining[0].id : '';
+        
+        const batch = writeBatch(firestore);
+        batch.delete(scheduleToDeleteRef);
+        batch.update(doc(firestore, 'classrooms', classroomId), { activeScheduleId: newActiveId });
+        await batch.commit();
+      } else {
+        // Just delete the non-active version
+        await deleteDoc(scheduleToDeleteRef);
+      }
+
+      toast({ title: 'Version Deleted', description: 'The schedule version has been permanently removed.' });
+    } catch (error) {
+      console.error('Error deleting schedule version:', error);
+      toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Could not delete the schedule version.' });
+    }
+  };
+
 
   const renderClassroomContent = () => {
     if (isLoading) {
@@ -344,17 +409,38 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
                         <CardTitle>Schedule for Class {selectedGrade}{selectedClass.toUpperCase()} at {schoolName}</CardTitle>
                         <CardDescription>Viewing as an administrator.</CardDescription>
                       </div>
-                      {activeSchedule?.schedule && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm"><Trash2 className="mr-2"/>Delete Active Schedule</Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Delete Schedule?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the schedule for this classroom.</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSchedule} className="bg-destructive hover:bg-destructive/90">Delete Schedule</AlertDialogAction></AlertDialogFooter>
-                          </AlertDialogContent>
-                      </AlertDialog>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {activeSchedule?.schedule && (
+                            <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm"><Trash2 className="mr-2"/>Delete Active Schedule</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader><AlertDialogTitle>Delete Schedule?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the active schedule for this classroom.</AlertDialogDescription></AlertDialogHeader>
+                                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSchedule} className="bg-destructive hover:bg-destructive/90">Delete Schedule</AlertDialogAction></AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        )}
+                        <Sheet>
+                          <SheetTrigger asChild>
+                            <Button variant="outline" size="icon" title="Schedule History">
+                              <History className="size-4" />
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent className="sm:max-w-md">
+                            <SheetHeader>
+                              <SheetTitle>Schedule History</SheetTitle>
+                              <SheetDescription>Previous versions of the schedule. You can set an older version as active.</SheetDescription>
+                            </SheetHeader>
+                            <ScheduleHistory 
+                                history={scheduleHistory || []}
+                                activeScheduleId={classroom?.activeScheduleId}
+                                onSetActive={handleSetActiveVersion}
+                                onDelete={handleDeleteVersion}
+                            />
+                          </SheetContent>
+                        </Sheet>
+                      </div>
                   </div>
                 </CardHeader>
                 <CardContent>
