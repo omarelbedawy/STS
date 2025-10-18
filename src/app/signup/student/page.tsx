@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +27,7 @@ import { auth } from "@/firebase/auth/client";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { schoolList } from "@/lib/schools";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
