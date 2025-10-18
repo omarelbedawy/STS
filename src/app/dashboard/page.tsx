@@ -37,12 +37,6 @@ export default function DashboardPage() {
     }
   }, [user, userLoading, router]);
 
-  useEffect(() => {
-    if (!userLoading && user && !user.emailVerified) {
-      router.push('/verify-email');
-    }
-  }, [user, userLoading, router]);
-
 
   const userProfileQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -53,7 +47,9 @@ export default function DashboardPage() {
 
   // Effect to create profile if it doesn't exist for a verified user
   useEffect(() => {
-      if (!userProfileLoading && user?.emailVerified && !userProfile && firestore && user.uid && claims) {
+      // IMPORTANT: Wait for claims to be loaded and have a role before creating the profile.
+      // This prevents a race condition where the profile is created before claims are ready.
+      if (!userProfileLoading && user?.emailVerified && !userProfile && firestore && user.uid && claims?.role) {
           const profileData: Omit<UserProfile, 'uid'> = {
               name: user.displayName || 'New User',
               email: user.email || '',
@@ -72,6 +68,7 @@ export default function DashboardPage() {
 
           const userDocRef = doc(firestore, "users", user.uid);
           setDoc(userDocRef, profileData).catch(async (serverError) => {
+              console.error("Error creating user profile:", serverError);
               const permissionError = new FirestorePermissionError({
                   path: userDocRef.path,
                   operation: 'create',
@@ -95,14 +92,14 @@ export default function DashboardPage() {
   }
 
   const renderDashboard = () => {
-    // If we have a profile, use its role. Otherwise, check for admin email as a fallback.
-    const role = userProfile?.role;
+    // If we have a profile, use its role. Otherwise, check claims as a fallback.
+    const role = userProfile?.role || claims?.role;
 
     switch (role) {
       case 'teacher':
-        return <TeacherDashboard teacher={userProfile} />;
+        return <TeacherDashboard teacher={userProfile!} />; // The profile will exist or be created.
       case 'admin':
-        return <AdminDashboard admin={userProfile} />;
+        return <AdminDashboard admin={userProfile!} />; // The profile will exist or be created.
       case 'student':
       default:
         // For students or if profile is somehow missing, show the schedule analyzer.
@@ -115,7 +112,7 @@ export default function DashboardPage() {
       <Header userProfile={userProfile} />
       <main className="container mx-auto px-4 pb-12 pt-8">
         <Suspense fallback={<DashboardSkeleton />}>
-          {userProfile ? renderDashboard() : <ScheduleAnalyzer />}
+          {isReady ? renderDashboard() : <DashboardSkeleton />}
         </Suspense>
       </main>
     </div>
