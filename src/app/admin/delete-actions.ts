@@ -3,8 +3,11 @@
 
 import { db, auth as adminAuth } from '@/firebase/server';
 import { CollectionReference } from 'firebase-admin/firestore';
+import { config } from 'dotenv';
 
-const ADMIN_SECRET = "Iamtheonlyadminonearth";
+config({ path: '.env.local' });
+
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "Iamtheonlyadminonearth";
 
 interface DeleteAllDataInput {
   target: 'all' | 'users' | 'schedules';

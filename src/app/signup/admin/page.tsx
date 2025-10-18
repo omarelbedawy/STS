@@ -28,7 +28,7 @@ import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/e
 import { errorEmitter } from "@/firebase/error-emitter";
 import { firebaseConfig } from "@/firebase/config";
 
-const ADMIN_SECRET = "Iamtheonlyadminonearth"; // Use a more secure secret from environment variables in a real app
+const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "Iamtheonlyadminonearth";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),

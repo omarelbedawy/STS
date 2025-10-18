@@ -1,10 +1,11 @@
 
 // Your web app's Firebase configuration
 export const firebaseConfig = {
-  apiKey: "AIzaSyDss7fQ-ILBkRRkCvV9SEkxZtRyH_MyHMM",
-  authDomain: "scheduleai-c6092.firebaseapp.com",
-  projectId: "scheduleai-c6092",
-  storageBucket: "scheduleai-c6092.firebasestorage.app",
-  messagingSenderId: "742904533401",
-  appId: "1:742904533401:web:dd624060e4760f753e8308"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
