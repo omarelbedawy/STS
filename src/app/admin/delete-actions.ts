@@ -58,16 +58,16 @@ export async function deleteAllDataAction(
         .map(userRecord => userRecord.uid);
 
       if (uidsToDelete.length > 0) {
-        // Max 500 users can be deleted at once from auth
-        for (let i = 0; i < uidsToDelete.length; i += 500) {
-            const chunk = uidsToDelete.slice(i, i + 500);
-            await adminAuth.deleteUsers(chunk);
-        }
+        // Delete from Auth
+        // Max 1000 users can be deleted at once from auth
+        await adminAuth.deleteUsers(uidsToDelete);
         
+        // Delete from Firestore
         const usersCollection = db.collection('users');
         const batch = db.batch();
         uidsToDelete.forEach(uid => {
-            batch.delete(usersCollection.doc(uid));
+            const userDocRef = usersCollection.doc(uid);
+            batch.delete(userDocRef);
         });
         await batch.commit();
       }
