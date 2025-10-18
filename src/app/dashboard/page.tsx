@@ -3,7 +3,7 @@
 
 import { Header } from "@/components/app/header";
 import { useUser } from "@/firebase/auth/use-user";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -28,14 +28,12 @@ function DashboardContent() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
     }
   }, [user, userLoading, router]);
-
 
   const userProfileQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -44,30 +42,28 @@ function DashboardContent() {
 
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
-  // This effect handles users who have verified their email but might not have a profile yet.
-  useEffect(() => {
-    // A special status from the login page can prevent immediate redirection.
-    const status = searchParams.get('status');
-    if (!userProfileLoading && user && user.emailVerified && !userProfile && status !== 'verified-no-profile') {
-       router.push('/login?status=verified-no-profile');
-    }
-  }, [user, userProfile, userProfileLoading, router, searchParams]);
-
   const isReady = !userLoading && !!user && !userProfileLoading && !!userProfile;
   
   if (user && !user.emailVerified) {
+    // If the user lands here and their email isn't verified, send them to the verification page.
+    useEffect(() => {
+      router.push('/verify-email');
+    }, [router]);
+    
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="mt-4">Please verify your email before logging in...</p>
+            <p className="mt-4">Please verify your email...</p>
             <p className="text-sm text-muted-foreground">Redirecting you to the verification page.</p>
           </div>
       </div>
     );
   }
 
-  if (!isReady) {
+  // If the user object is loaded and exists, but the profile is still loading,
+  // show a spinner instead of redirecting. This handles the race condition.
+  if ((userLoading || userProfileLoading) || (!user && !userLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -77,13 +73,19 @@ function DashboardContent() {
   }
 
   const renderDashboard = () => {
-    const role = userProfile?.role;
+    // This case handles when a user is authenticated but the profile document doesn't exist in Firestore yet.
+    // This can happen for a brief moment after sign-up. We show a loading state.
+    if (!userProfile) {
+        return <DashboardSkeleton />;
+    }
+
+    const role = userProfile.role;
 
     switch (role) {
       case 'teacher':
-        return <TeacherDashboard teacher={userProfile!} />;
+        return <TeacherDashboard teacher={userProfile} />;
       case 'admin':
-        return <AdminDashboard admin={userProfile!} />;
+        return <AdminDashboard admin={userProfile} />;
       case 'student':
       default:
         return <ScheduleAnalyzer />;
