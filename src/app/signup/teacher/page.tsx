@@ -32,9 +32,6 @@ import { useState } from "react";
 import { schoolList } from "@/lib/schools";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { functions } from "@/firebase/functions";
-import { httpsCallable } from "firebase/functions";
-
 
 const classSubjectSchema = z.object({
   grade: z.enum(["10", "11", "12"]),

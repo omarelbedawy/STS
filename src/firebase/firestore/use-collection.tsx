@@ -41,8 +41,7 @@ function useCollection_Internal<T>(query: Query<DocumentData> | null): UseCollec
     const unsubscribe = onSnapshot(query, (snapshot: QuerySnapshot<DocumentData>) => {
       const result: T[] = [];
       snapshot.forEach((doc) => {
-        // Here we use the document ID as the 'uid'
-        result.push({ uid: doc.id, id: doc.id, ...doc.data() } as unknown as T);
+        result.push({ id: doc.id, ...doc.data() } as unknown as T);
       });
       setData(result);
       setLoading(false);

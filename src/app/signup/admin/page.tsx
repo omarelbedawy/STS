@@ -24,8 +24,6 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { functions } from "@/firebase/functions";
-import { httpsCallable } from "firebase/functions";
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "Iamtheonlyadminonearth";
 
