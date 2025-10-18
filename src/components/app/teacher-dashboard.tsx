@@ -12,13 +12,15 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
-import { useFirestore, useDoc, useCollection } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { doc, collection, query, where, getDocs } from "firebase/firestore";
 import { ClassmatesDashboard } from "./classmates-dashboard";
-import { Loader2 } from "lucide-react";
+import { BellRing, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { schoolList } from "@/lib/schools";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 type TeacherClass = NonNullable<UserProfile['teacherProfile']>['classes'][number];
 
@@ -26,6 +28,20 @@ interface Classroom {
     activeScheduleId?: string;
 }
 
+
+function TeacherReviewAlert({ pendingReviews }: { pendingReviews: Explanation[] | null }) {
+    if (!pendingReviews || pendingReviews.length === 0) return null;
+
+    return (
+        <Alert variant="destructive">
+            <BellRing className="h-4 w-4" />
+            <AlertTitle>Pending Reviews!</AlertTitle>
+            <AlertDescription>
+                You have {pendingReviews.length} finished explanation(s) that need to be marked as "Explained" or "Not Explained". You can find them in the Classmates & Commitments section below.
+            </AlertDescription>
+        </Alert>
+    );
+}
 
 export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
   const [selectedClass, setSelectedClass] = useState<TeacherClass | null>(
@@ -42,19 +58,19 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
     return `${teacher.school}-${selectedClass.grade}-${selectedClass.class}`;
   }, [teacher.school, selectedClass]);
 
-  const classroomDocRef = useMemo(() => {
+  const classroomDocRef = useMemoFirebase(() => {
     if (!firestore || !classroomId) return null;
     return doc(firestore, 'classrooms', classroomId);
   }, [firestore, classroomId]);
   const { data: classroom, loading: classroomLoading } = useDoc<Classroom>(classroomDocRef);
 
-  const activeScheduleDocRef = useMemo(() => {
+  const activeScheduleDocRef = useMemoFirebase(() => {
     if (!firestore || !classroomId || !classroom?.activeScheduleId) return null;
     return doc(firestore, 'classrooms', classroomId, 'schedules', classroom.activeScheduleId);
   }, [firestore, classroomId, classroom?.activeScheduleId]);
   const { data: activeSchedule, loading: activeScheduleLoading } = useDoc<ClassroomSchedule>(activeScheduleDocRef);
 
-  const classmatesQuery = useMemo(() => {
+  const classmatesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedClass || !teacher.school) return null;
     return query(
       collection(firestore, "users"),
@@ -65,16 +81,24 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
   }, [firestore, teacher.school, selectedClass]);
   const { data: classmates, loading: classmatesLoading } = useCollection<UserProfile>(classmatesQuery);
 
-  const explanationsQuery = useMemo(() => {
+  const allExplanationsQuery = useMemoFirebase(() => {
     if (!firestore || !classroomId) return null;
-    return query(
-        collection(firestore, 'classrooms', classroomId, 'explanations'),
-        where("subject", "==", selectedClass?.subject || '')
-    );
-  }, [firestore, classroomId, selectedClass]);
-  const { data: explanations, loading: explanationsLoading } = useCollection<Explanation>(explanationsQuery);
+    return collection(firestore, 'classrooms', classroomId, 'explanations');
+  }, [firestore, classroomId]);
+  const { data: allExplanations, loading: allExplanationsLoading } = useCollection<Explanation>(allExplanationsQuery);
 
-  const isLoading = classroomLoading || activeScheduleLoading || classmatesLoading || explanationsLoading;
+  const explanationsForSubject = useMemo(() => {
+      if (!allExplanations || !selectedClass?.subject) return [];
+      return allExplanations.filter(exp => exp.subject === selectedClass.subject);
+  }, [allExplanations, selectedClass?.subject]);
+
+  const pendingReviewExplanations = useMemo(() => {
+      if (!explanationsForSubject) return null;
+      return explanationsForSubject.filter(exp => exp.status === 'Finished' && exp.completionStatus === 'pending');
+  }, [explanationsForSubject]);
+
+
+  const isLoading = classroomLoading || activeScheduleLoading || classmatesLoading || allExplanationsLoading;
 
   const schoolName = schoolList.find(s => s.id === teacher.school)?.name || teacher.school;
 
@@ -84,7 +108,7 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
     // Create a deep copy to avoid mutating the original data
     const newSchedule = JSON.parse(JSON.stringify(activeSchedule.schedule));
 
-    return newSchedule.map(row => {
+    return newSchedule.map((row:any) => {
         Object.keys(row).forEach(key => {
             if (['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'].includes(key)) {
                 const subjects = String(row[key]).split('/').map(s => s.trim());
@@ -131,6 +155,7 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
     if (selectedClass) {
         return (
             <>
+            <TeacherReviewAlert pendingReviews={pendingReviewExplanations} />
             <Card>
                 <CardHeader>
                     <CardTitle>Schedule for Class {selectedClass.grade}{selectedClass.class.toUpperCase()} at {schoolName}</CardTitle>
@@ -143,7 +168,7 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
                             isEditing={false}
                             user={teacher}
                             classroomId={classroomId}
-                            explanations={explanations || []}
+                            explanations={explanationsForSubject}
                             classmates={classmates}
                          />
                     ) : (
@@ -155,7 +180,7 @@ export function TeacherDashboard({ teacher }: { teacher: UserProfile }) {
             </Card>
             <ClassmatesDashboard 
                 classmates={classmates} 
-                explanations={explanations} 
+                explanations={explanationsForSubject} 
                 currentUser={teacher}
                 classroomId={classroomId}
             />

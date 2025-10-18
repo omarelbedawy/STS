@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ArrowLeftRight, Split, Loader2, X, CalendarIcon, Check, PartyPopper } from "lucide-react";
+import { ArrowLeftRight, Split, Loader2, X, CalendarIcon, Check } from "lucide-react";
 import React, { useState, KeyboardEvent, useMemo } from 'react';
 import type { UserProfile, Explanation, ExplanationContributor } from "@/lib/types";
 import { Button } from "../ui/button";
@@ -35,7 +35,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, writeBatch, getDocs, query, where, updateDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import {
   Tooltip,
@@ -463,11 +463,12 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
 
 
 
-export function SubjectCell({ subject, isEditing, onChange, user, classroomId, day, session, explanations, classmates }: {
+export function SubjectCell({ subject, isEditing, onChange, user, isViewingOwnClass, classroomId, day, session, explanations, classmates }: {
   subject: string;
   isEditing: boolean;
   onChange: (newSubject: string) => void;
   user: UserProfile | null;
+  isViewingOwnClass?: boolean;
   classroomId: string | null;
   day: string;
   session: string;
@@ -516,11 +517,11 @@ export function SubjectCell({ subject, isEditing, onChange, user, classroomId, d
         : sub.split('/')[1].trim()
       : sub;
       
-    const canExplain = explainableSubjects.includes(subjectPart);
+    const canExplain = explainableSubjects.includes(subjectPart) && isViewingOwnClass;
 
-    // Find explanations for this specific subject part
-    const partExplanations = (explanations || []).filter(e => e.subject === subjectPart);
-    const acceptedCount = partExplanations.reduce((acc, exp) => acc + (exp.contributors || []).filter(c => c.status === 'accepted').length, 0);
+    // Find upcoming explanations for this specific subject part to show the badge
+    const upcomingExplanations = (explanations || []).filter(e => e.subject === subjectPart && e.status === 'Upcoming');
+    const acceptedCount = upcomingExplanations.reduce((acc, exp) => acc + (exp.contributors || []).filter(c => c.status === 'accepted').length, 0);
 
 
     const cellWrapper = (
@@ -537,7 +538,7 @@ export function SubjectCell({ subject, isEditing, onChange, user, classroomId, d
       >
         <span
           className={cn(
-            !canExplain && subjectPart !== "—" && subjectPart !== "Leave School"
+            !explainableSubjects.includes(subjectPart) && subjectPart !== "—" && subjectPart !== "Leave School"
               ? "text-muted-foreground/50"
               : "font-semibold text-foreground"
           )}

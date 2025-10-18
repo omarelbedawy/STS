@@ -5,7 +5,7 @@ import type { UserProfile, Explanation, ExplanationContributor } from "@/lib/typ
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, BookUser, CalendarDays, Clock, Trash2, Check, X } from "lucide-react";
+import { Users, BookUser, CalendarDays, Clock, Trash2, Check, X, ChevronsUpDown } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
@@ -19,12 +19,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useFirestore } from "@/firebase";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import React from "react";
 
 
 function getInitials(name: string) {
@@ -134,12 +140,20 @@ function ExplanationCard({
 
     return (
         <Card className={cn("bg-card/50 relative group", {
-            "border-destructive shadow-lg": explanation.completionStatus === 'not-explained'
+            "border-green-500/50 shadow-md": explanation.completionStatus === 'explained',
+            "border-destructive/70": explanation.completionStatus === 'not-explained'
         })}>
              <div className="absolute top-2 right-2 flex items-center gap-2">
                 {explanation.status === 'Upcoming' 
                     ? <Badge variant="outline">Upcoming</Badge>
-                    : <Badge variant="secondary">Finished</Badge>
+                    : <Badge variant="secondary" className={cn({
+                        'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700': explanation.completionStatus === 'explained',
+                        'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700': explanation.completionStatus === 'not-explained'
+                    })}>
+                        {explanation.completionStatus === 'explained' ? 'Explained' :
+                         explanation.completionStatus === 'not-explained' ? 'Not Explained' :
+                         'Finished'}
+                      </Badge>
                 }
                 
                 {canDelete && (
@@ -206,6 +220,82 @@ function ExplanationCard({
     )
 }
 
+function StudentCommitments({ student, explanations, currentUser, classroomId }: {
+    student: UserProfile;
+    explanations: Explanation[];
+    currentUser: UserProfile | null;
+    classroomId: string | null;
+}) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    
+    const studentExplanations = (explanations || [])
+        .filter(exp => (exp.contributors || []).some(c => c.userId === student.uid && c.status === 'accepted'))
+        .sort((a, b) => {
+            const dateA = a.createdAt?.toDate()?.getTime() || 0;
+            const dateB = b.createdAt?.toDate()?.getTime() || 0;
+            return dateB - dateA;
+        });
+
+    if (studentExplanations.length === 0) {
+        return (
+            <div className="flex items-start gap-4">
+                 <Link href={`/profile/${student.uid}`} className="block">
+                    <Avatar>
+                        <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                    </Avatar>
+                </Link>
+                <div className="w-full pt-1">
+                    <Link href={`/profile/${student.uid}`} className="hover:underline">
+                        <p className="font-medium">{student.name} {student.uid === currentUser?.uid && "(You)"}</p>
+                    </Link>
+                    <p className="text-sm text-muted-foreground">No commitments yet.</p>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <div className="flex items-start gap-4">
+                <Link href={`/profile/${student.uid}`} className="block">
+                    <Avatar>
+                        <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                    </Avatar>
+                </Link>
+                <div className="w-full">
+                    <CollapsibleTrigger asChild>
+                        <div className="flex w-full items-center justify-between cursor-pointer rounded-md p-1 -m-1 hover:bg-muted">
+                            <div>
+                                <Link href={`/profile/${student.uid}`} className="hover:underline" onClick={e => e.stopPropagation()}>
+                                    <p className="font-medium">{student.name} {student.uid === currentUser?.uid && "(You)"}</p>
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{studentExplanations.length} commitment(s)</p>
+                            </div>
+                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                <ChevronsUpDown className="h-4 w-4" />
+                                <span className="sr-only">Toggle</span>
+                            </Button>
+                        </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 mt-3">
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {studentExplanations.map(exp => (
+                                <ExplanationCard 
+                                    key={exp.id} 
+                                    explanation={exp} 
+                                    currentUser={currentUser} 
+                                    classroomId={classroomId}
+                                />
+                            ))}
+                        </div>
+                    </CollapsibleContent>
+                </div>
+            </div>
+        </Collapsible>
+    )
+}
+
+
 export function ClassmatesDashboard({ classmates, explanations, currentUser, classroomId, onDeleteAllExplanations }: { 
     classmates: UserProfile[] | null;
     explanations: Explanation[] | null;
@@ -259,7 +349,6 @@ export function ClassmatesDashboard({ classmates, explanations, currentUser, cla
                             <div className="w-full space-y-2">
                                 <Skeleton className="h-4 w-1/4" />
                                 <Skeleton className="h-3 w-1/3" />
-                                <Skeleton className="h-20 w-full" />
                             </div>
                         </div>
                     ))
@@ -268,45 +357,15 @@ export function ClassmatesDashboard({ classmates, explanations, currentUser, cla
                         This class has no students yet.
                     </div>
                 ) : (
-                    classmates.map(student => {
-                        const studentExplanations = (explanations || [])
-                            .filter(exp => (exp.contributors || []).some(c => c.userId === student.uid && c.status === 'accepted'))
-                            .sort((a, b) => {
-                                const dateA = a.createdAt?.toDate()?.getTime() || 0;
-                                const dateB = b.createdAt?.toDate()?.getTime() || 0;
-                                return dateB - dateA;
-                            });
-
-                        return (
-                            <div key={student.uid} className="flex items-start gap-4">
-                                <Link href={`/profile/${student.uid}`} className="block">
-                                    <Avatar>
-                                        <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
-                                    </Avatar>
-                                </Link>
-                                <div className="w-full space-y-3">
-                                    <div>
-                                        <Link href={`/profile/${student.uid}`} className="hover:underline">
-                                            <p className="font-medium">{student.name} {student.uid === currentUser?.uid && "(You)"}</p>
-                                        </Link>
-                                        <p className="text-sm text-muted-foreground">{student.email}</p>
-                                    </div>
-                                    {studentExplanations.length > 0 && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                            {studentExplanations.map(exp => (
-                                                <ExplanationCard 
-                                                    key={exp.id} 
-                                                    explanation={exp} 
-                                                    currentUser={currentUser} 
-                                                    classroomId={classroomId}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })
+                    classmates.map(student => (
+                       <StudentCommitments
+                          key={student.uid}
+                          student={student}
+                          explanations={explanations || []}
+                          currentUser={currentUser}
+                          classroomId={classroomId}
+                       />
+                    ))
                 )}
             </CardContent>
         </Card>

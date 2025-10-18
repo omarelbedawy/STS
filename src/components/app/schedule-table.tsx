@@ -14,9 +14,10 @@ const dayHeaders = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
 
 export function ScheduleTable({ 
   scheduleData, 
-  isEditing = false, 
+  isEditing = false,
   onScheduleChange,
   user,
+  isViewingOwnClass,
   classroomId,
   explanations,
   classmates,
@@ -25,6 +26,7 @@ export function ScheduleTable({
   isEditing?: boolean;
   onScheduleChange?: (rowIndex: number, day: string, newSubject: string) => void;
   user: UserProfile | null;
+  isViewingOwnClass?: boolean;
   classroomId: string | null;
   explanations: Explanation[];
   classmates: UserProfile[] | null;
@@ -75,6 +77,7 @@ export function ScheduleTable({
                   isEditing={isEditing}
                   onChange={(newSubject) => onScheduleChange?.(rowIndex, day, newSubject)}
                   user={user}
+                  isViewingOwnClass={isViewingOwnClass}
                   classroomId={classroomId}
                   day={day}
                   session={row.session}
