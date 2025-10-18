@@ -101,10 +101,17 @@ export default function StudentSignUpPage() {
 
     } catch (error: any) {
       console.error("Sign up error:", error);
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "This email is already registered. Please use a different email or log in.";
+      } else if (error.message) {
+        description = error.message;
+      }
+      
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: description,
       });
     } finally {
         setIsLoading(false);
