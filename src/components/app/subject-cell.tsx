@@ -193,6 +193,14 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
   }
 
   const handleSubmit = async () => {
+    // Automatically add the last typed concept if it exists
+    const finalConcepts = [...concepts];
+    if (currentConcept.trim() && !finalConcepts.includes(currentConcept.trim())) {
+      finalConcepts.push(currentConcept.trim());
+      setConcepts(finalConcepts);
+      setCurrentConcept('');
+    }
+
     if (!explanationDate) {
       toast({
         variant: "destructive",
@@ -201,13 +209,23 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
       });
       return;
     }
-    if ((!isLanguage && !learningOutcome) || concepts.length === 0 || !firestore || !classroomId) {
+
+    if ((!isLanguage && !learningOutcome) || finalConcepts.length === 0) {
       toast({
         variant: "destructive",
         title: "Missing Information",
         description: isLanguage
           ? "Please add at least one concept."
           : "Please select a learning outcome and add at least one concept.",
+      });
+      return;
+    }
+
+    if (!firestore || !classroomId) {
+       toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "Could not connect to the database. Please try again later.",
       });
       return;
     }
@@ -227,7 +245,7 @@ const ExplainDialog = ({ user, classroomId, day, session, subject, children, onO
         subject,
         day,
         session,
-        concepts,
+        concepts: finalConcepts,
         explanationDate,
         status: 'Upcoming' as const,
         completionStatus: 'pending' as const,
