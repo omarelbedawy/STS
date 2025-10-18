@@ -8,13 +8,11 @@ import { useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import type { UserProfile } from "@/lib/types";
-import { doc, setDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TeacherDashboard } from '@/components/app/teacher-dashboard';
 import { AdminDashboard } from '@/components/app/admin-dashboard';
 import { ScheduleAnalyzer } from '@/components/app/schedule-analyzer';
-import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 
 
 function DashboardSkeleton() {
@@ -27,7 +25,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const { user, loading: userLoading, claims } = useUser();
+  const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
 
@@ -45,43 +43,7 @@ export default function DashboardPage() {
 
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
-  // Effect to create profile if it doesn't exist for a verified user
-  useEffect(() => {
-      // IMPORTANT: Wait for claims to be loaded and have a role before creating the profile.
-      // This prevents a race condition where the profile is created before claims are ready.
-      if (!userProfileLoading && user?.emailVerified && !userProfile && firestore && user.uid && claims?.role) {
-          const profileData: Omit<UserProfile, 'uid'> = {
-              name: user.displayName || 'New User',
-              email: user.email || '',
-              role: claims.role,
-              school: claims.school,
-              ...(claims.role === 'student' && {
-                  grade: claims.grade,
-                  class: claims.class,
-              }),
-              ...(claims.role === 'teacher' && {
-                  teacherProfile: {
-                      classes: claims.classes || [],
-                  },
-              }),
-          };
-
-          const userDocRef = doc(firestore, "users", user.uid);
-          setDoc(userDocRef, profileData).catch(async (serverError) => {
-              console.error("Error creating user profile:", serverError);
-              const permissionError = new FirestorePermissionError({
-                  path: userDocRef.path,
-                  operation: 'create',
-                  requestResourceData: profileData,
-              } satisfies SecurityRuleContext);
-              errorEmitter.emit('permission-error', permissionError);
-          });
-      }
-  }, [user, userProfile, userProfileLoading, firestore, claims]);
-
-
-  const isReady = !userLoading && !!user && !userProfileLoading && (!!userProfile || !!claims?.role);
-
+  const isReady = !userLoading && !!user && !userProfileLoading && !!userProfile;
 
   if (!isReady) {
     return (
@@ -93,27 +55,24 @@ export default function DashboardPage() {
   }
   
   if (user && !user.emailVerified) {
-    router.push('/verify-email');
     return (
         <div className="flex min-h-screen items-center justify-center bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4">Redirecting to email verification...</p>
+            <p className="ml-4">Please verify your email before logging in...</p>
         </div>
     );
   }
 
   const renderDashboard = () => {
-    // If we have a profile, use its role. Otherwise, check claims as a fallback.
-    const role = userProfile?.role || claims?.role;
+    const role = userProfile?.role;
 
     switch (role) {
       case 'teacher':
-        return <TeacherDashboard teacher={userProfile!} />; // The profile will exist or be created.
+        return <TeacherDashboard teacher={userProfile!} />;
       case 'admin':
-        return <AdminDashboard admin={userProfile!} />; // The profile will exist or be created.
+        return <AdminDashboard admin={userProfile!} />;
       case 'student':
       default:
-        // For students or if profile is somehow missing, show the schedule analyzer.
         return <ScheduleAnalyzer />;
     }
   }

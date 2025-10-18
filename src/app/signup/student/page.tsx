@@ -30,7 +30,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { schoolList } from "@/lib/schools";
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useFirestore } from "@/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -50,6 +51,7 @@ export default function StudentSignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,39 +68,44 @@ export default function StudentSignUpPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    if (!firestore) {
+      toast({
+        variant: "destructive",
+        title: "Sign Up Failed",
+        description: "Database service is not available. Please try again later.",
+      });
+      setIsLoading(false);
+      return;
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
-      
-      const functions = getFunctions(auth.app);
-      const setCustomUserClaims = httpsCallable(functions, 'setCustomUserClaims');
-      await setCustomUserClaims({
-        uid: user.uid,
-        claims: {
-          role: 'student',
-          school: values.school,
-          grade: values.grade,
-          class: values.class
-        }
+
+      // Create user profile directly in Firestore
+      const userDocRef = doc(firestore, "users", user.uid);
+      await setDoc(userDocRef, {
+        name: values.name,
+        email: values.email,
+        role: 'student',
+        school: values.school,
+        grade: values.grade,
+        class: values.class
       });
-      
-      // Force refresh of the token to get custom claims
-      await user.getIdToken(true);
 
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: `${window.location.origin}/login`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
       
       toast({
         title: "Account Created",
-        description: "Please check your inbox to verify your email address.",
+        description: "Please check your inbox to verify your email address before logging in.",
       });
 
-      router.push("/verify-email");
+      router.push("/login");
 
     } catch (error: any) {
       console.error("Sign up error:", error);

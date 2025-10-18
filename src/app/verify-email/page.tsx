@@ -47,29 +47,13 @@ export default function VerifyEmailPage() {
     }
     return () => clearInterval(interval);
   }, [isSending]);
-  
-  // Handle periodic re-checking of user's email verification status
-  useEffect(() => {
-    if (user && !user.emailVerified) {
-        const intervalId = setInterval(async () => {
-            if (auth.currentUser) {
-                await auth.currentUser.reload();
-                // State is updated by the onAuthStateChanged listener in useUser hook,
-                // which will trigger the redirection effect above.
-            }
-        }, 5000); // Check every 5 seconds
-
-        return () => clearInterval(intervalId);
-    }
-  }, [user]);
-
 
   const handleResendVerification = async () => {
     if (!user) return;
     setIsSending(true);
     try {
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: `${window.location.origin}/login`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
@@ -149,6 +133,11 @@ export default function VerifyEmailPage() {
               'Resend Verification Email'
             )}
           </Button>
+           <div className="mt-2 text-center text-sm">
+             <Button variant="link" onClick={() => router.push('/login')}>
+                Already verified? Log In
+             </Button>
+          </div>
           <div className="mt-6 text-center text-sm">
              <Button variant="link" onClick={handleSignOut}>
                 Sign in with a different account
