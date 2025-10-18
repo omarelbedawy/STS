@@ -18,6 +18,10 @@ interface DeleteAllDataInput {
 
 // Helper function to delete all documents in a collection or subcollection
 async function deleteCollection(collectionRef: CollectionReference, batchSize: number) {
+  if (!db) {
+    console.error("Firestore not initialized in deleteCollection");
+    return;
+  }
     const query = collectionRef.limit(batchSize);
     let snapshot = await query.get();
 
@@ -33,6 +37,10 @@ async function deleteCollection(collectionRef: CollectionReference, batchSize: n
 
 // Helper function to delete all subcollections for a given document
 async function deleteSubcollections(docRef: FirebaseFirestore.DocumentReference) {
+  if (!db) {
+    console.error("Firestore not initialized in deleteSubcollections");
+    return;
+  }
     const subcollections = await docRef.listCollections();
     for (const subcollection of subcollections) {
         await deleteCollection(subcollection, 100);
@@ -46,6 +54,11 @@ export async function deleteAllDataAction(
   if (input.adminSecret !== ADMIN_SECRET) {
     return { success: false, message: "Incorrect admin secret." };
   }
+
+  if (!db || !adminAuth) {
+    return { success: false, message: "Server Firebase services are not initialized." };
+  }
+
 
   try {
     if (input.target === 'users' || input.target === 'all') {

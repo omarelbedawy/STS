@@ -53,9 +53,10 @@ import { differenceInDays, formatDistanceToNowStrict } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { BellRing, UploadCloud, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from '@/components/ui/badge';
 
 
-type AnalysisState = 'idle' | 'previewing' | 'loading' | 'displaying' | 'uploading';
+type AnalysisState = 'idle' | 'previewing' | 'analyzing' | 'loading' | 'displaying' | 'uploading';
 type ScheduleRow = AnalyzeScheduleFromImageOutput['schedule'][number];
 
 interface Classroom {
@@ -193,7 +194,7 @@ export function ScheduleAnalyzer() {
   const isLoading = userLoading || userProfileLoading || classroomLoading || activeScheduleLoading || classmatesLoading || teachersLoading || explanationsLoading || scheduleHistoryLoading;
 
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading && state !== 'analyzing') {
       setState('loading');
       return;
     }
@@ -288,7 +289,7 @@ export function ScheduleAnalyzer() {
   
   const onSubmit = async () => {
     if (!file || !classroomId || !userProfile?.name || !firestore) return;
-    setState('loading');
+    setState('analyzing');
     try {
       const base64Image = await toBase64(file);
       const analysisResult = await analyzeScheduleAction({ scheduleImage: base64Image });
@@ -383,8 +384,8 @@ export function ScheduleAnalyzer() {
     return `class ${grade}${classLetter.toUpperCase()} at ${school?.name || 'a school'}`;
   }
 
-  if (state === 'loading') {
-    return <LoadingState isAnalyzing={file !== null} />;
+  if (state === 'loading' || state === 'analyzing') {
+    return <LoadingState isAnalyzing={state === 'analyzing'} />;
   }
 
   const renderMainContent = () => {
@@ -481,7 +482,7 @@ function ReminderAlert({ explanations, currentUser }: { explanations: Explanatio
 function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState(
-    isAnalyzing ? 'Analyzing your schedule...' : 'Loading schedule...'
+    isAnalyzing ? 'Analyzing your schedule...' : 'Loading workspace...'
   );
 
   useEffect(() => {
@@ -518,7 +519,7 @@ function LoadingState({ isAnalyzing }: { isAnalyzing: boolean }) {
   return (
     <Card className="flex-1">
       <CardHeader>
-        <CardTitle>{isAnalyzing ? 'Analyzing...' : 'Loading Workspace...'}</CardTitle>
+        <CardTitle>{isAnalyzing ? 'Analyzing Schedule' : 'Loading Workspace'}</CardTitle>
         <CardDescription>
           {isAnalyzing
             ? 'Please wait while the AI processes your schedule image.'
