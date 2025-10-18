@@ -21,14 +21,12 @@ export default function VerifyEmailPage() {
 
   // Redirect if user status changes (e.g., they get verified)
   useEffect(() => {
-    if (!userLoading) {
-      if (user?.emailVerified) {
-        toast({
-            title: 'Email Verified!',
-            description: 'Your account is now active. Welcome to STS!',
-        });
-        router.push('/dashboard');
-      }
+    if (!userLoading && user?.emailVerified) {
+      toast({
+          title: 'Email Verified!',
+          description: 'Your account is now active. Welcome to STS!',
+      });
+      router.push('/dashboard');
     }
   }, [user, userLoading, router, toast]);
 
@@ -71,7 +69,7 @@ export default function VerifyEmailPage() {
     setIsSending(true);
     try {
       const actionCodeSettings = {
-        url: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}/dashboard`,
+        url: `${window.location.origin}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);

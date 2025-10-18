@@ -26,14 +26,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { auth } from "@/firebase/auth/client";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { schoolList } from "@/lib/schools";
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -51,7 +48,6 @@ const formSchema = z.object({
 
 export default function StudentSignUpPage() {
   const router = useRouter();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -71,40 +67,32 @@ export default function StudentSignUpPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      if (!firestore) {
-        throw new Error("Firestore is not initialized");
-      }
-
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
       
+      // Set custom claims before sending verification email
+      const functions = getFunctions(auth.app);
+      const setCustomUserClaims = httpsCallable(functions, 'setCustomUserClaims');
+      await setCustomUserClaims({
+        uid: user.uid,
+        claims: {
+          role: 'student',
+          school: values.school,
+          grade: values.grade,
+          class: values.class
+        }
+      });
+
+      // Force refresh of the token to get the new claims
+      await user.getIdToken(true);
+
       const actionCodeSettings = {
         url: `${window.location.origin}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
-
-      const userProfile = {
-        name: values.name,
-        email: values.email,
-        role: "student",
-        school: values.school,
-        grade: values.grade,
-        class: values.class,
-      };
-
-      const userDocRef = doc(firestore, "users", user.uid);
-      
-      setDoc(userDocRef, userProfile).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'create',
-          requestResourceData: userProfile,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-      });
       
       toast({
         title: "Account Created",

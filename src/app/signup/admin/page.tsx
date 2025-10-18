@@ -19,13 +19,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { auth } from "@/firebase/auth/client";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "Iamtheonlyadminonearth";
 
@@ -44,7 +41,6 @@ const formSchema = z.object({
 
 export default function AdminSignUpPage() {
   const router = useRouter();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -62,36 +58,30 @@ export default function AdminSignUpPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      if (!firestore) throw new Error("Firestore is not initialized");
-
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.name });
+
+      // Set custom claims before sending verification email
+      const functions = getFunctions(auth.app);
+      const setCustomUserClaims = httpsCallable(functions, 'setCustomUserClaims');
+      await setCustomUserClaims({
+        uid: user.uid,
+        claims: {
+          role: 'admin',
+          school: 'all',
+        }
+      });
+      
+      // Force refresh of the token to get the new claims
+      await user.getIdToken(true);
       
       const actionCodeSettings = {
         url: `${window.location.origin}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
-
-
-      const userProfile = {
-        name: values.name,
-        email: values.email,
-        role: "admin",
-        school: "all", // Admins might have access to all schools
-      };
-
-      const userDocRef = doc(firestore, "users", user.uid);
-      setDoc(userDocRef, userProfile).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'create',
-          requestResourceData: userProfile,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-      });
       
       toast({
         title: "Admin Account Created",
