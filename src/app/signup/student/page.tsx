@@ -50,11 +50,6 @@ export default function StudentSignUpPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const [origin, setOrigin] = useState('');
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,7 +95,6 @@ export default function StudentSignUpPage() {
       await updateProfile(user, { displayName: values.name });
       
       const actionCodeSettings = {
-        url: `${origin}/dashboard`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
@@ -116,7 +110,10 @@ export default function StudentSignUpPage() {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === "auth/email-already-in-use") {
         description = "This email is already registered. Please use a different email or log in.";
-      } else if (error.message) {
+      } else if (error.code === 'auth/unauthorized-continue-uri') {
+        description = "The domain of the continue URL is not whitelisted. Please contact support.";
+      }
+      else if (error.message) {
         description = error.message;
       }
       toast({
