@@ -112,7 +112,7 @@ export default function StudentSignUpPage() {
       if (error.code === "auth/email-already-in-use") {
         description = "This email is already registered. Please use a different email or log in.";
       } else if (error.code === 'auth/unauthorized-continue-uri') {
-        description = "The domain of the continue URL is not whitelisted. Please contact support.";
+          description = "The domain of the continue URL is not whitelisted. Please contact support.";
       }
       else if (error.message) {
         description = error.message;
