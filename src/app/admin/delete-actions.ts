@@ -4,7 +4,6 @@
 import { db, auth as adminAuth } from '@/firebase/server';
 import { CollectionReference } from 'firebase-admin/firestore';
 import { config } from 'dotenv';
-import { UserRecord } from 'firebase-admin/auth';
 
 config({ path: '.env.local' });
 
@@ -14,6 +13,7 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || "Iamtheonlyadminonearth";
 interface DeleteAllDataInput {
   target: 'all' | 'users' | 'schedules';
   adminSecret: string;
+  adminUid: string; // The UID of the admin performing the action
 }
 
 // Helper function to delete all documents in a collection or subcollection
@@ -51,20 +51,20 @@ export async function deleteAllDataAction(
     if (input.target === 'users' || input.target === 'all') {
       // Fetch all users to find the admin
       const listUsersResult = await adminAuth.listUsers(1000);
-      const allUsers = listUsersResult.users;
       
-      // Find the admin user(s) by checking their custom claims or role in Firestore
-      const usersCollection = db.collection('users');
-      const adminDocs = await usersCollection.where('role', '==', 'admin').get();
-      const adminUids = adminDocs.docs.map(doc => doc.id);
-      
-      const uidsToDelete = allUsers
-        .filter(userRecord => !adminUids.includes(userRecord.uid))
+      // Filter out the admin performing the action
+      const uidsToDelete = listUsersResult.users
+        .filter(userRecord => userRecord.uid !== input.adminUid)
         .map(userRecord => userRecord.uid);
 
       if (uidsToDelete.length > 0) {
-        await adminAuth.deleteUsers(uidsToDelete);
+        // Max 500 users can be deleted at once from auth
+        for (let i = 0; i < uidsToDelete.length; i += 500) {
+            const chunk = uidsToDelete.slice(i, i + 500);
+            await adminAuth.deleteUsers(chunk);
+        }
         
+        const usersCollection = db.collection('users');
         const batch = db.batch();
         uidsToDelete.forEach(uid => {
             batch.delete(usersCollection.doc(uid));
@@ -74,7 +74,6 @@ export async function deleteAllDataAction(
     }
 
     if (input.target === 'schedules' || input.target === 'all') {
-      // 3. Delete all classroom data (schedules, explanations, etc.)
       const classroomsCollection = db.collection('classrooms');
       const classroomDocs = await classroomsCollection.listDocuments();
       for (const docRef of classroomDocs) {
@@ -83,7 +82,7 @@ export async function deleteAllDataAction(
       }
     }
 
-    return { success: true, message: `Successfully deleted all ${input.target}.` };
+    return { success: true, message: `Successfully deleted selected ${input.target} data.` };
 
   } catch (error: any) {
     console.error(`Error during bulk deletion (target: ${input.target}):`, error);

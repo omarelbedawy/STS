@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteAllDataAction } from '@/app/admin/delete-actions';
 import { Loader2, Trash2 } from 'lucide-react';
 
-export function DeleteData() {
+export function DeleteData({ adminUid }: { adminUid: string }) {
   const { toast } = useToast();
   const [target, setTarget] = useState<'all' | 'users' | 'schedules'>('all');
   const [adminSecret, setAdminSecret] = useState('');
@@ -46,7 +46,7 @@ export function DeleteData() {
         description: `Attempting to delete all ${target}. Please do not navigate away.`,
     });
 
-    const result = await deleteAllDataAction({ target, adminSecret });
+    const result = await deleteAllDataAction({ target, adminSecret, adminUid });
 
     if (result.success) {
       toast({
@@ -82,7 +82,7 @@ export function DeleteData() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="schedules">All Classroom Data (Schedules & Explanations)</SelectItem>
-                    <SelectItem value="users">All Users (Auth & Profiles)</SelectItem>
+                    <SelectItem value="users">All Users (except you)</SelectItem>
                     <SelectItem value="all" className="text-destructive">EVERYTHING (All Users & All Classrooms)</SelectItem>
                 </SelectContent>
             </Select>
@@ -110,7 +110,7 @@ export function DeleteData() {
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action is irreversible. You are about to delete{' '}
-                <span className="font-bold text-destructive">all {target}</span> from the system.
+                <span className="font-bold text-destructive">all {target === 'users' ? 'other users' : target}</span> from the system.
                 This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { ScheduleTable } from "./schedule-table";
-import { useFirestore, useCollection, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useDoc, useUser } from "@/firebase";
 import { doc, collection, query, where, deleteDoc, getDocs, writeBatch } from "firebase/firestore";
 import { ClassmatesDashboard } from "./classmates-dashboard";
 import { Loader2, Trash2 } from "lucide-react";
@@ -212,6 +212,7 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
   const [selectedGrade, setSelectedGrade] = useState<string>("11");
   const [selectedClass, setSelectedClass] = useState<string>("c");
   const [view, setView] = useState<'users' | 'classrooms' | 'dangerZone'>('classrooms');
+  const { user } = useUser();
 
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -417,7 +418,7 @@ export function AdminDashboard({ admin }: { admin: UserProfile }) {
 
       {view === 'classrooms' && renderClassroomContent()}
       {view === 'users' && <UserManagement adminUser={admin} />}
-      {view === 'dangerZone' && <DeleteData />}
+      {view === 'dangerZone' && user && <DeleteData adminUid={user.uid} />}
     </div>
   );
 }
