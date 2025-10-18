@@ -82,11 +82,7 @@ export default function AdminSignUpPage() {
         school: 'all'
       });
       
-      const actionCodeSettings = {
-        url: `${window.location.origin}/login`,
-        handleCodeInApp: true,
-      };
-      await sendEmailVerification(user, actionCodeSettings);
+      await sendEmailVerification(user);
       
       toast({
         title: "Admin Account Created",

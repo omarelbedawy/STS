@@ -94,11 +94,7 @@ export default function StudentSignUpPage() {
         class: values.class
       });
 
-      const actionCodeSettings = {
-        url: `${window.location.origin}/login`,
-        handleCodeInApp: true,
-      };
-      await sendEmailVerification(user, actionCodeSettings);
+      await sendEmailVerification(user);
       
       toast({
         title: "Account Created",
