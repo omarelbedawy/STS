@@ -72,7 +72,6 @@ export async function deleteAllDataAction(
 
       if (uidsToDelete.length > 0) {
         // Delete from Auth
-        // Max 1000 users can be deleted at once from auth
         await adminAuth.deleteUsers(uidsToDelete);
         
         // Delete from Firestore
