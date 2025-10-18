@@ -242,6 +242,7 @@ export function ScheduleAnalyzer() {
 
 
   const handleFileSelect = (selectedFile: File | null) => {
+    if (!isViewingOwnClass) return; // <-- Add this check
     if (selectedFile && selectedFile.type.startsWith('image/')) {
       setFile(selectedFile);
       const url = URL.createObjectURL(selectedFile);
@@ -257,7 +258,7 @@ export function ScheduleAnalyzer() {
   };
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => { handleFileSelect(e.target.files?.[0] ?? null) };
-  const onDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true) };
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => { if (isViewingOwnClass) { e.preventDefault(); setIsDragging(true)} };
   const onDragLeave = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false) };
   const onDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); handleFileSelect(e.dataTransfer.files?.[0] ?? null) };
 
@@ -410,6 +411,7 @@ export function ScheduleAnalyzer() {
           onSubmit={onSubmit}
           schoolName={getSchoolName(viewedSchool, viewedGrade, viewedClass)}
           hasActiveSchedule={!!activeSchedule}
+          isViewingOwnClass={isViewingOwnClass}
         />
       </div>
     );
@@ -621,7 +623,7 @@ function ResultState({ user, isViewingOwnClass, classroomId, activeSchedule, cla
   );
 }
 
-function UploadCard({ isDragging, onDragOver, onDragLeave, onDrop, fileInputRef, onFileChange, state, previewUrl, onCancelUpload, onSubmit, schoolName, hasActiveSchedule }: {
+function UploadCard({ isDragging, onDragOver, onDragLeave, onDrop, fileInputRef, onFileChange, state, previewUrl, onCancelUpload, onSubmit, schoolName, hasActiveSchedule, isViewingOwnClass }: {
   isDragging: boolean;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
   onDragLeave: (e: DragEvent<HTMLDivElement>) => void;
@@ -634,12 +636,18 @@ function UploadCard({ isDragging, onDragOver, onDragLeave, onDrop, fileInputRef,
   onSubmit: () => void;
   schoolName: string;
   hasActiveSchedule: boolean;
+  isViewingOwnClass: boolean;
 }) {
   const effectiveState = state === 'uploading' || state === 'idle' || state === 'previewing' ? state : 'idle';
+  const isDisabled = !isViewingOwnClass;
 
   return (
     <Card
-      className={cn('border-2 border-dashed transition-colors w-full', isDragging && 'border-primary bg-primary/10')}
+      className={cn(
+        'border-2 border-dashed transition-colors w-full',
+        isDragging && !isDisabled && 'border-primary bg-primary/10',
+        isDisabled && 'border-muted bg-muted/20 cursor-not-allowed'
+      )}
       onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
     >
       <CardHeader>
@@ -657,13 +665,15 @@ function UploadCard({ isDragging, onDragOver, onDragLeave, onDrop, fileInputRef,
           </div>
       </CardHeader>
       <CardContent className="p-6">
-        <input type="file" ref={fileInputRef} onChange={onFileChange} className="hidden" accept="image/*" />
+        <input type="file" ref={fileInputRef} onChange={onFileChange} className="hidden" accept="image/*" disabled={isDisabled} />
         {effectiveState !== 'previewing' && (
-          <div className="flex flex-col items-center justify-center space-y-4 py-16 text-center" onClick={() => fileInputRef.current?.click()} role="button">
-            <div className="rounded-full border border-dashed bg-secondary p-4">
-              <UploadCloud className="size-10 text-muted-foreground" />
+          <div className={cn("flex flex-col items-center justify-center space-y-4 py-16 text-center", !isDisabled && "cursor-pointer")} onClick={() => !isDisabled && fileInputRef.current?.click()} role={!isDisabled ? "button" : undefined}>
+            <div className={cn("rounded-full border border-dashed p-4", isDisabled ? 'bg-muted' : 'bg-secondary')}>
+              <UploadCloud className={cn("size-10", isDisabled ? 'text-muted-foreground/50' : 'text-muted-foreground')} />
             </div>
-            <p className="text-muted-foreground">Drag & drop your schedule image here, or click to browse</p>
+            <p className={cn("text-muted-foreground", isDisabled && 'text-muted-foreground/50')}>
+              {isDisabled ? "You can only upload schedules for your own class." : "Drag & drop your schedule image here, or click to browse"}
+            </p>
           </div>
         )}
         {effectiveState === 'previewing' && previewUrl && (
@@ -739,3 +749,5 @@ const toBase64 = (file: File): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+
+    
