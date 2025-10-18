@@ -40,7 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScheduleTable } from "./schedule-table";
 import { useFirestore, useCollection, useDoc, useUser } from "@/firebase";
-import { doc, collection, query, where, deleteDoc, getDocs, writeBatch } from "firebase/firestore";
+import { doc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { ClassmatesDashboard } from "./classmates-dashboard";
 import { Loader2, Trash2 } from "lucide-react";
 import { schoolList } from "@/lib/schools";
@@ -82,14 +82,19 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
     if (!firestore) return;
     
     toast({ title: "Deleting User...", description: "Removing user profile and authentication entry."});
+    
+    const originalUsers = [...users];
+    // Optimistically update UI
+    setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
+
 
     const result = await deleteUserAction({ userId });
 
     if (result.success) {
-      // Optimistically update UI
-      setUsers(currentUsers => currentUsers.filter(u => u.uid !== userId));
       toast({ title: "User Deleted", description: "The user has been successfully removed from the system."});
     } else {
+       // Revert UI on failure
+      setUsers(originalUsers);
       console.error("Error deleting user: ", result.message);
       toast({ variant: "destructive", title: "Deletion Failed", description: result.message || "Could not delete user."});
     }
@@ -103,6 +108,15 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
         u.role.toLowerCase().includes(filter.toLowerCase())
     ));
   }, [users, filter]);
+  
+  const getBadgeVariant = (role: 'admin' | 'teacher' | 'student') => {
+    switch (role) {
+        case 'admin': return 'destructive';
+        case 'teacher': return 'default';
+        case 'student': return 'secondary';
+        default: return 'secondary';
+    }
+  };
 
   const renderUserContent = () => {
     if (usersLoading) {
@@ -166,7 +180,7 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
                         <TableRow key={user.uid}>
                             <TableCell className="font-medium">{user.name}</TableCell>
                             <TableCell>{user.email}</TableCell>
-                            <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>{user.role}</Badge></TableCell>
+                            <TableCell><Badge variant={getBadgeVariant(user.role)}>{user.role}</Badge></TableCell>
                             <TableCell>{schoolList.find(s => s.id === user.school)?.name || user.school}</TableCell>
                             <TableCell>{user.grade || 'N/A'}</TableCell>
                             <TableCell>{user.class?.toUpperCase() || 'N/A'}</TableCell>
