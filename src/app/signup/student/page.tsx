@@ -96,7 +96,7 @@ export default function StudentSignUpPage() {
       await updateProfile(user, { displayName: values.name });
       
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: 'https://sts-indol.vercel.app/dashboard',
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);

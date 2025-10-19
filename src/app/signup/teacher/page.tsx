@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -105,7 +106,7 @@ export default function TeacherSignUpPage() {
       });
 
       const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
+        url: 'https://sts-indol.vercel.app/dashboard',
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
