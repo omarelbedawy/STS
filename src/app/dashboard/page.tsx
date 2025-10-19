@@ -29,13 +29,21 @@ function DashboardContent() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  // Redirect to login if user is not loaded and not loading.
+  // This effect handles redirection for unauthenticated or unverified users.
   useEffect(() => {
-    if (!userLoading && !user) {
-      router.push('/login');
+    // If loading is finished...
+    if (!userLoading) {
+      // And there's no user, go to login.
+      if (!user) {
+        router.push('/login');
+      } 
+      // Or if there is a user, but their email isn't verified, go to verification page.
+      else if (!user.emailVerified) {
+        router.push('/verify-email');
+      }
     }
   }, [user, userLoading, router]);
-
+  
   const userProfileQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return doc(firestore, "users", user.uid);
@@ -43,27 +51,11 @@ function DashboardContent() {
 
   const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileQuery);
 
-  const isReady = !userLoading && !!user && !userProfileLoading && !!userProfile;
+  const isReady = !userLoading && !!user && user.emailVerified && !userProfileLoading && !!userProfile;
   
-  if (user && !user.emailVerified) {
-    // If the user lands here and their email isn't verified, send them to the verification page.
-    useEffect(() => {
-      router.push('/verify-email');
-    }, [router]);
-    
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="mt-4">Please verify your email...</p>
-            <p className="text-sm text-muted-foreground">Redirecting you to the verification page.</p>
-          </div>
-      </div>
-    );
-  }
-
-  // Show a loading spinner while user or profile data is being fetched.
-  if (userLoading || userProfileLoading) {
+  // While loading user state or if user is not verified yet, show a full-page loader.
+  // This prevents any dashboard content from flashing on the screen for unverified users.
+  if (userLoading || !user?.emailVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
