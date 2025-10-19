@@ -68,7 +68,6 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  // Query all users except the current admin
   const usersQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'users'));
@@ -81,7 +80,6 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
   
   useEffect(() => {
       if (allUsers) {
-          // Filter out the current admin user from the list displayed
           setUsers(allUsers.filter(u => u.uid !== adminUser.uid));
       }
   }, [allUsers, adminUser.uid]);
@@ -98,7 +96,6 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
     const result = await deleteUserAction({ userId });
 
     if (result.success) {
-        // UI will update automatically via Firestore snapshot listener
         toast({ title: "User Deleted", description: "The user has been successfully removed."});
     } else {
         console.error("Error deleting user: ", result.message);
@@ -108,7 +105,7 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    return users.filter(u => (
+    return users.filter(u => u.uid && (
         u.name.toLowerCase().includes(filter.toLowerCase()) ||
         u.email.toLowerCase().includes(filter.toLowerCase()) ||
         u.role.toLowerCase().includes(filter.toLowerCase())
