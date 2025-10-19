@@ -90,6 +90,7 @@ export function ScheduleAnalyzer() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userProfileQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -881,5 +882,7 @@ const toBase64 = (file: File): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+
+    
 
     
