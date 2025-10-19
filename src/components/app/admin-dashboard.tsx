@@ -88,6 +88,11 @@ function UserManagement({ adminUser }: { adminUser: UserProfile }) {
 
 
   const handleDeleteUser = async (userId: string) => {
+    if (!userId) {
+      console.error("Invalid userId provided for deletion.");
+      toast({ variant: "destructive", title: "Deletion Failed", description: "Invalid user ID."});
+      return;
+    }
     toast({ title: "Deleting User...", description: "Please wait..."});
 
     const result = await deleteUserAction({ userId });
