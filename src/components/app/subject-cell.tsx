@@ -64,7 +64,7 @@ const subjectList = [
   "Arabic", "EN", "Bio", "CH", "PH", "MATH", "MEC", "CITZ", "ACTV", "ADV", "CAP", "REL", "F", "G", "PE", "CS", "Geo", "SOCIAL", "—", "Leave School"
 ];
 
-const explainableSubjects = ["MATH", "PH", "MEC", "Geo", "CH", "Bio", "Arabic", "EN", "F", "G", "CS"];
+const explainableSubjects = ["MATH", "PH", "MEC", "GEO", "CH", "BIO", "ARABIC", "EN", "F", "G", "CS"];
 const languageSubjects = ["Arabic", "EN", "F", "G", "CS"];
 
 
@@ -563,7 +563,7 @@ export function SubjectCell({ subject, isEditing, onChange, user, isViewingOwnCl
         : sub.split('/')[1].trim()
       : sub;
       
-    const canExplain = explainableSubjects.includes(subjectPart) && isViewingOwnClass;
+    const canExplain = explainableSubjects.includes(subjectPart.toUpperCase()) && isViewingOwnClass;
 
     // Find upcoming explanations for this specific subject part to show the badge
     const upcomingExplanations = (explanations || []).filter(e => e.subject === subjectPart && e.status === 'Upcoming');
@@ -584,7 +584,7 @@ export function SubjectCell({ subject, isEditing, onChange, user, isViewingOwnCl
       >
         <span
           className={cn(
-            !explainableSubjects.includes(subjectPart) && subjectPart !== "—" && subjectPart !== "Leave School"
+            !explainableSubjects.includes(subjectPart.toUpperCase()) && subjectPart !== "—" && subjectPart !== "Leave School"
               ? "text-muted-foreground/50"
               : "font-semibold text-foreground"
           )}
