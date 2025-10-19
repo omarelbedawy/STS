@@ -12,7 +12,9 @@ import {
   ChevronDown,
   Globe,
   History,
-  Home
+  Home,
+  Edit,
+  Save
 } from 'lucide-react';
 
 import { analyzeScheduleAction } from '@/app/actions';
@@ -30,7 +32,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import {
   Select,
@@ -106,7 +107,6 @@ export function ScheduleAnalyzer() {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Set initial view to user's own class once profile loads
   useEffect(() => {
@@ -564,6 +564,61 @@ function ResultState({
   onBackToMyClass: () => void;
 }) {
   const lastUpdated = activeSchedule?.uploadedAt ? activeSchedule.uploadedAt.toDate().toLocaleString() : null;
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedSchedule, setEditedSchedule] = useState<ScheduleRow[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (activeSchedule?.schedule) {
+      setEditedSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
+    }
+  }, [activeSchedule]);
+
+  const handleScheduleChange = (rowIndex: number, day: string, newSubject: string) => {
+    setEditedSchedule(currentSchedule => {
+      const newSchedule = [...currentSchedule];
+      const newRow = { ...newSchedule[rowIndex], [day]: newSubject };
+      newSchedule[rowIndex] = newRow;
+      return newSchedule;
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    if (!firestore || !classroomId || !user?.name) return;
+    setIsSaving(true);
+    try {
+      const newScheduleData: Omit<ClassroomSchedule, 'id'> = {
+        schedule: editedSchedule,
+        uploadedBy: `${user.name} (manual edit)`,
+        uploadedAt: serverTimestamp(),
+      };
+      const scheduleHistoryCollection = collection(firestore, 'classrooms', classroomId, 'schedules');
+      const newScheduleDocRef = await addDoc(scheduleHistoryCollection, newScheduleData);
+
+      const classroomDoc = doc(firestore, 'classrooms', classroomId);
+      await updateDoc(classroomDoc, { activeScheduleId: newScheduleDocRef.id });
+
+      toast({
+        title: 'Schedule Updated',
+        description: 'Your changes have been saved and the schedule is now active.',
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving schedule:', error);
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save your changes.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (activeSchedule?.schedule) {
+      setEditedSchedule(JSON.parse(JSON.stringify(activeSchedule.schedule)));
+    }
+    setIsEditing(false);
+  };
 
   return (
     <div className="space-y-8">
@@ -637,7 +692,21 @@ function ResultState({
                   </SheetContent>
                 </Sheet>
               )}
-
+              {isViewingOwnClass && !isEditing && (
+                 <Button onClick={() => setIsEditing(true)} variant="outline">
+                  <Edit className="mr-2" />
+                  Edit Schedule
+                </Button>
+              )}
+              {isViewingOwnClass && isEditing && (
+                 <div className="flex gap-2">
+                    <Button onClick={handleSaveChanges} disabled={isSaving}>
+                      {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />}
+                      Save Changes
+                    </Button>
+                    <Button onClick={handleCancelEdit} variant="ghost" disabled={isSaving}>Cancel</Button>
+                 </div>
+              )}
               {isViewingOwnClass && (
                 <Button onClick={onNewUpload} variant="outline">
                   <Upload className="mr-2" />
@@ -650,8 +719,9 @@ function ResultState({
         <CardContent>
           {(activeSchedule?.schedule && activeSchedule.schedule.length > 0) ? (
             <ScheduleTable
-              scheduleData={activeSchedule.schedule}
-              isEditing={false}
+              scheduleData={isEditing ? editedSchedule : activeSchedule.schedule}
+              isEditing={isEditing}
+              onScheduleChange={handleScheduleChange}
               user={user}
               isViewingOwnClass={isViewingOwnClass}
               classroomId={classroomId}
@@ -811,3 +881,5 @@ const toBase64 = (file: File): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+
+    
